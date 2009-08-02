@@ -1,0 +1,23 @@
+- unless Chef::Config[:authorized_openid_providers]
+  - throw_content(:sidebar_block_notice) do
+    %h4 Where do I get a Login?
+    %p Chef uses OpenID for user logins. By default, Chef allows you to use any OpenID provider you like.  You should configure the server to utilize only trusted OpenID servers and URIs.  This box will disappear when you have altered the default security configuration.
+    %p= link_to("How to secure your Chef Server on the Chef Wiki.", "http://wiki.opscode.com/display/chef/Securing+Chef+Server")
+
+.block#block-forms
+  .content
+    %h2.title Login
+    .inner
+      %form.form{ :method => "get", "accept-charset" => "UTF-8", :action => slice_url(:openid_consumer_login) }
+        .group
+          .text_field= text_field :openid_identifier
+        .group
+          .check_box= check_box :name => "immediate", :label => "Use immediate mode", :value => "0"
+        .group
+          .check_box= check_box :name => "use_sreg", :label => "Request registration data", :value => "0"
+        .group
+          .check_box= check_box :name => "use_pape", :label => "Request phishing-resistent auth policy", :value => "0"
+        .group
+          .check_box= check_box :name => "force_post", :label => "Force the transaction to POST", :value => "0"
+        .group.navform
+          .button= submit "Login &rarr;"

@@ -1,0 +1,14 @@
+.block#block-tables
+  .content
+    %h2.title Search Results
+    .inner
+      - @results.each do |result|
+        %table.table.search{:width => '400px'}
+          %tr
+            %th.first Attribute
+            %th.last Value
+          - @results.each do |result|
+            - result.sort { |a,b| a[0].to_s <=> b[0].to_s}.each_with_index do |h,index|
+              %tr{:class => "#{index % 2 == 1 ? 'odd' : 'even'}"}
+                %td= "#{h[0]} (#{h[1].class})"
+                %td= h[1]
