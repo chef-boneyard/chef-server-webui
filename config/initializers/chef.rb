@@ -1,6 +1,4 @@
 require 'chef'
-require 'chef/solr'
-
 require 'chef/role'
 require 'chef/webui_user'
 

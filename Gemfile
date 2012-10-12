@@ -1,6 +1,3 @@
-$:.push File.expand_path("../lib", __FILE__)
-require "chef-server-webui/version"
-
 source :rubygems
 
 gem "rails", "3.2.2"
@@ -9,8 +6,7 @@ gem "haml-rails"
 gem "ruby-openid"
 gem "coderay"
 
-gem "chef", ChefServerWebui::VERSION, :git => "git://github.com/opscode/chef.git", :require => false # load individual parts as needed
-gem "chef-solr", ChefServerWebui::VERSION, :git => "git://github.com/opscode/chef.git", :require => false
+gem "chef", :git => "git://github.com/opscode/chef.git", :branch => "master", :require => false
 
 group(:development) do
   gem 'thin'
