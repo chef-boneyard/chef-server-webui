@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/lib/chef-server-webui/version'
+require File.dirname(__FILE__) + '/lib/chef_server_webui/version'
 
 Gem::Specification.new do |s|
   s.name = "chef-server-webui"

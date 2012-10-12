@@ -24,13 +24,13 @@ $:.unshift(File.expand_path(File.dirname(__FILE__) + '/../lib'))
 
 # Print the version if we have -v or --version
 if ARGV.any? { |arg| arg =~ /\-v|\-\-version/ }
-  require 'chef-server-webui/version'
+  require 'chef_server_webui/version'
   puts "Chef Server (Web UI) Version: #{ChefServerWebui::VERSION}"
   exit 1
 end
 
 require 'chef'
-require 'chef-server-webui'
+require 'chef_server_webui'
 
 # Run the server unless console or script runner requested
 unless %w[c console r runner].any? { |o| ARGV.index(o) }
