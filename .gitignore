@@ -13,3 +13,7 @@
 # Ignore all logfiles and tempfiles.
 /log/*.log
 /tmp
+
+# Omnibus/dev-vm ignores
+config/environments/chefserver.rb
+*.dev_vm_backup
