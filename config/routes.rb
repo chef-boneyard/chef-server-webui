@@ -61,12 +61,6 @@ ChefServerWebui::Application.routes.draw do
     resources :databag_items
   end
 
-  match '/openid/consumer', :to => 'openid_consumer#index', :as => :openid_consumer
-  match '/openid/consumer/start', :to => 'openid_consumer#start', :as => :openid_consumer_start
-  match '/openid/consumer/login', :to => 'openid_consumer#login', :as => :openid_consumer_login
-  match '/openid/consumer/complete', :to => 'openid_consumer#complete', :as => :openid_consumer_complete
-  match '/openid/consumer/logout', :to => 'openid_consumer#logout', :as => :openid_consumer_logout
-
   match '/login', :to => 'users#login', :as => :users_login
   match '/logout', :to => 'users#logout', :as => :users_logout
 

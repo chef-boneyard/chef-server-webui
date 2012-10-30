@@ -72,11 +72,6 @@ class UsersController < ApplicationController
         @user.set_password(params[:new_password], params[:confirm_new_password])
       end
 
-      if params[:openid].length == 0 or params[:openid].nil?
-        @user.set_openid(nil)
-      else
-        @user.set_openid(URI.parse(params[:openid]).normalize.to_s)
-      end
       @user.save
       flash[:notice] = "Updated user #{@user.name}."
       render :show

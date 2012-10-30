@@ -9,8 +9,6 @@
         %div.group
           .text_field= password_field_tag "password", "", :id => "password", :label => "Password: ", :class => "password_field"
         %br/
-        =link_to("Or, log in with OpenID if you have one associated with an existing user account.", openid_consumer_path)
-        %br/
 
       - if form_for == "edit"
         %div.group.form
@@ -29,11 +27,6 @@
             %input{ :type => "hidden", :name => "admin", :value => 0 }
             %input{ :type => "checkbox", :name => "admin", :value => 1, :checked => @user.admin }
             %span.description Whether or not the User is an admin.
-
-        %div.group.form
-          %label.label OpenID Association
-          = text_field_tag "openid", @user.openid, :id => "openid", :class => "text_field"
-          %span.description Associate an OpenID with the user account, leave blank if you do not want to associate one.
 
       %div.group
         .actions-bar

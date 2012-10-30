@@ -3,7 +3,6 @@ source :rubygems
 gem "rails", "3.2.2"
 gem "jquery-rails"
 gem "haml-rails"
-gem "ruby-openid"
 gem "coderay"
 
 gem "chef", :git => "git://github.com/opscode/chef.git", :branch => "master", :require => false
