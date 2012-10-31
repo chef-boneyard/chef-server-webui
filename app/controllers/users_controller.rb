@@ -1,6 +1,5 @@
 #
-# Author:: Nuo Yan (<nuo@opscode.com>)
-# Copyright:: Copyright (c) 2008 Opscode, Inc.
+# Copyright:: Copyright (c) 2008-2012 Opscode, Inc.
 # License:: Apache License, Version 2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -114,8 +113,7 @@ class UsersController < ApplicationController
 
   def login_exec
     begin
-      @user = User.load(params[:name])
-      raise(Unauthorized, "Wrong username or password.") unless @user.verify_password(params[:password])
+      raise(Unauthorized, "Wrong username or password.") unless User.authenticate_user(params[:name], params[:password])
       complete
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
@@ -129,7 +127,7 @@ class UsersController < ApplicationController
   def complete
     session[:user] = params[:name]
     session[:level] = (@user.admin == true ? :admin : :user)
-    (@user.name == Chef::Config[:web_ui_admin_user_name] && @user.verify_password(Chef::Config[:web_ui_admin_default_password])) ? redirect_to(users_edit_url(@user.name), :flash => { :warning => "Please change the default password" }) : redirect_back_or_default(nodes_url)
+    (@user.name == Chef::Config[:web_ui_admin_user_name] && User.authenticate_user(Chef::Config[:web_ui_admin_user_name], Chef::Config[:web_ui_admin_default_password])) ? redirect_to(users_edit_url(@user.name), :flash => { :warning => "Please change the default password" }) : redirect_back_or_default(nodes_url)
   end
 
   def logout

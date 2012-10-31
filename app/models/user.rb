@@ -22,11 +22,11 @@ require 'chef/json_compat'
 class User
 
   attr_accessor :name, :validated, :admin
-  attr_reader   :password, :salt
+  attr_reader   :password
 
   # Create a new User object.
   def initialize(opts={})
-    @name, @salt, @password = opts['name'], opts['salt'], opts['password']
+    @name, @password = opts['name'], opts['password']
     @admin = false
   end
 
@@ -43,16 +43,7 @@ class User
     raise ArgumentError, "Passwords do not match" unless password == confirm_password
     raise ArgumentError, "Password cannot be blank" if (password.nil? || password.length==0)
     raise ArgumentError, "Password must be a minimum of 6 characters" if password.length < 6
-    generate_salt
-    @password = encrypt_password(password)
-  end
-
-  def set_openid(given_openid)
-    @openid = given_openid
-  end
-
-  def verify_password(given_password)
-    encrypt_password(given_password) == @password
+    @password = password
   end
 
   # Serialize this object as a hash
@@ -61,12 +52,47 @@ class User
     recipes = Array.new
     result = {
       'name' => name,
-      'json_class' => self.class.name,
-      'salt' => salt,
       'password' => password,
       'admin' => admin
     }
     result.to_json(*a)
+  end
+
+  # Remove this User via the REST API
+  def destroy
+    r = Chef::REST.new(Chef::Config[:chef_server_url])
+    r.delete_rest("users/#{@name}")
+  end
+
+  # Save this User via the REST API
+  def save
+    r = Chef::REST.new(Chef::Config[:chef_server_url])
+    begin
+      r.put_rest("users/#{@name}", self)
+    rescue Net::HTTPServerException => e
+      if e.response.code == "404"
+        r.post_rest("users", self)
+      else
+        raise e
+      end
+    end
+    self
+  end
+
+  # Create the User via the REST API
+  def create
+    r = Chef::REST.new(Chef::Config[:chef_server_url])
+    r.post_rest("users", self)
+    self
+  end
+
+  #############################################################################
+  # Class Methods
+  #############################################################################
+
+  def self.authenticate(name, password)
+    r = Chef::REST.new(Chef::Config[:chef_server_url])
+    r.post_rest("authenticate_user", {'name' => name, 'password' => password})
   end
 
   # Create a User from JSON
@@ -99,60 +125,6 @@ class User
   def self.has_key?(name)
     raise "NOT YET IMPLEMENTED"
     #Chef::CouchDB.new.has_key?("webui_user", name)
-  end
-
-  # Remove this User via the REST API
-  def destroy
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    r.delete_rest("users/#{@name}")
-  end
-
-  # Save this User via the REST API
-  def save
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    begin
-      r.put_rest("users/#{@name}", self)
-    rescue Net::HTTPServerException => e
-      if e.response.code == "404"
-        r.post_rest("users", self)
-      else
-        raise e
-      end
-    end
-    self
-  end
-
-  # Create the User via the REST API
-  def create
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    r.post_rest("users", self)
-    self
-  end
-
-  #return true if an admin user exists. this is pretty expensive (O(n)), should think of a better way (nuo)
-  def self.admin_exist
-    raise "NOT YET IMPLEMENTED"
-    # users = self.cdb_list
-    # users.each do |u|
-    #   user = self.cdb_load(u)
-    #   if user.admin
-    #     return user.name
-    #   end
-    # end
-    # nil
-  end
-
-  protected
-
-  def generate_salt
-    @salt = Time.now.to_s
-    chars = ("a".."z").to_a + ("A".."Z").to_a + ("0".."9").to_a
-    1.upto(30) { |i| @salt << chars[rand(chars.size-1)] }
-    @salt
-  end
-
-  def encrypt_password(password)
-    Digest::SHA1.hexdigest("--#{salt}--#{password}--")
   end
 
 end
