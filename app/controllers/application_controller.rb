@@ -21,7 +21,7 @@ class ApplicationController < ActionController::Base
   end
 
   def load_session_user
-    Chef::WebUIUser.load(session[:user])
+    User.load(session[:user])
   rescue
     raise NotFound, "Cannot find User #{session[:user]}, maybe it got deleted by an Administrator."
   end
@@ -32,7 +32,7 @@ class ApplicationController < ActionController::Base
 
   def logout_and_redirect_to_login
     cleanup_session
-    @user = Chef::WebUIUser.new
+    @user = User.new
     redirect_to users_login_url, :error => $!
   end
 
@@ -41,16 +41,16 @@ class ApplicationController < ActionController::Base
   end
 
   def is_admin?
-    user = Chef::WebUIUser.load(session[:user])
+    user = User.load(session[:user])
     user.admin?
   end
 
   #return true if there is only one admin left, false otherwise
   def is_last_admin?
     count = 0
-    users = Chef::WebUIUser.list
+    users = User.list
     users.each do |u, url|
-      user = Chef::WebUIUser.load(u)
+      user = User.load(u)
       if user.admin
         count = count + 1
         return false if count == 2

@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-require 'chef/webui_user'
 require 'uri'
 
 class UsersController < ApplicationController
@@ -28,7 +27,7 @@ class UsersController < ApplicationController
   # List users, only if the user is admin.
   def index
     begin
-      @users = Chef::WebUIUser.list
+      @users = User.list
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       set_user_and_redirect
@@ -38,7 +37,7 @@ class UsersController < ApplicationController
   # Edit user. Admin can edit everyone, non-admin user can only edit itself.
   def edit
     begin
-      @user = Chef::WebUIUser.load(params[:user_id])
+      @user = User.load(params[:user_id])
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       set_user_and_redirect
@@ -48,7 +47,7 @@ class UsersController < ApplicationController
   # Show the details of a user. If the user is not admin, only able to show itself; otherwise able to show everyone
   def show
     begin
-      @user = Chef::WebUIUser.load(params[:user_id])
+      @user = User.load(params[:user_id])
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       set_user_and_redirect
@@ -58,7 +57,7 @@ class UsersController < ApplicationController
   # PUT to /users/:user_id/update
   def update
     begin
-      @user = Chef::WebUIUser.load(params[:user_id])
+      @user = User.load(params[:user_id])
 
       if session[:level] == :admin and !is_last_admin?
         @user.admin = params[:admin] =~ /1/ ? true : false
@@ -77,7 +76,7 @@ class UsersController < ApplicationController
       render :show
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      @u = Chef::WebUIUser.load(params[:user_id])
+      @u = User.load(params[:user_id])
       flash[:error] = "Could not update user #{@user.name}."
       render :edit
     end
@@ -85,7 +84,7 @@ class UsersController < ApplicationController
 
   def new
     begin
-      @user = Chef::WebUIUser.new
+      @user = User.new
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       set_user_and_redirect
@@ -94,7 +93,7 @@ class UsersController < ApplicationController
 
   def create
     begin
-      @user = Chef::WebUIUser.new
+      @user = User.new
       @user.name = params[:name]
       @user.set_password(params[:password], params[:password2])
       @user.admin = true if params[:admin]
@@ -109,18 +108,18 @@ class UsersController < ApplicationController
   end
 
   def login
-    @user = Chef::WebUIUser.new
+    @user = User.new
     session[:user] ? (redirect_to nodes_url, :flash => { :warning => "You've already logged in with user #{session[:user]}" } ) : (render :layout => 'login')
   end
 
   def login_exec
     begin
-      @user = Chef::WebUIUser.load(params[:name])
+      @user = User.load(params[:name])
       raise(Unauthorized, "Wrong username or password.") unless @user.verify_password(params[:password])
       complete
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      @user = Chef::WebUIUser.new
+      @user = User.new
       flash[:error] = "Could not complete logging in."
       @environments = []
       render :login
@@ -142,7 +141,7 @@ class UsersController < ApplicationController
     begin
       raise Forbidden, "A non-admin user can only delete itself" if (params[:user_id] != session[:user] && session[:level] != :admin)
       raise Forbidden, "The last admin user cannot be deleted" if (is_admin? && is_last_admin? && session[:user] == params[:user_id])
-      @user = Chef::WebUIUser.load(params[:user_id])
+      @user = User.load(params[:user_id])
       @user.destroy
       logout if params[:user_id] == session[:user]
       redirect_to users_url, :notice => "User #{params[:user_id]} deleted successfully."
@@ -156,7 +155,7 @@ class UsersController < ApplicationController
 
     def set_user_and_redirect
       begin
-        @user = Chef::WebUIUser.load(session[:user]) rescue (raise NotFound, "Cannot find User #{session[:user]}, maybe it got deleted by an Administrator.")
+        @user = User.load(session[:user]) rescue (raise NotFound, "Cannot find User #{session[:user]}, maybe it got deleted by an Administrator.")
       rescue
         logout_and_redirect_to_login
       else
@@ -166,7 +165,7 @@ class UsersController < ApplicationController
 
     def redirect_to_list_users(message)
       flash = message
-      @users = Chef::WebUIUser.list
+      @users = User.list
       render :index
     end
 
