@@ -17,4 +17,20 @@ module SessionHelper
     end
     true
   end
+
+  #whether or not the user should be able to edit a user's admin status
+  def can_edit_admin?(user)
+    # only admins can edit flag
+    if is_admin?
+      # an admin can edit other users flag
+      if user != session[:user]
+        true
+      # an admin can edit their own flag if they are not the last admin
+      elsif is_last_admin?
+        false
+      end
+    else
+      false
+    end
+  end
 end

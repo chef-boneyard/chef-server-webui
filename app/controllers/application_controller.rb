@@ -1,5 +1,5 @@
 class ApplicationController < ActionController::Base
-
+  include SessionHelper
   include Chef::Mixin::Checksum
 
   before_filter :load_environments
@@ -38,31 +38,6 @@ class ApplicationController < ActionController::Base
 
   def require_admin
     raise AdminAccessRequired unless is_admin?
-  end
-
-  def is_admin?
-    user = User.load(session[:user])
-    user.admin?
-  end
-
-  #return true if there is only one admin left, false otherwise
-  def is_last_admin?
-    count = 0
-    users = User.list
-    users.each do |u, url|
-      user = User.load(u)
-      if user.admin
-        count = count + 1
-        return false if count == 2
-      end
-    end
-    true
-  end
-
-  #whether or not the user should be able to edit a user's admin status
-  def can_edit_admin?
-    return false unless is_admin? && !is_last_admin?
-    true
   end
 
   # Store the URI of the current request in the session.
