@@ -56,13 +56,23 @@ module ChefServer
     class << self
       [:get, :post, :put, :delete].each do |method|
         define_method method do |*args|
-          client.send("#{method}_rest".to_sym, *args)
+          begin
+            client.send("#{method}_rest".to_sym, *args)
+          rescue => e
+            Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
+            raise e
+          end
         end
       end
 
       [:fetch].each do |method|
         define_method method do |*args|
-          client.send(method, *args)
+          begin
+            client.send(method, *args)
+          rescue => e
+            Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
+            raise e
+          end
         end
       end
     end

@@ -46,7 +46,6 @@ class DatabagsController < ApplicationController
     @databags = begin
                   ChefServer::Client.get("data")
                 rescue => e
-                  Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                   flash[:error] = "Could not list databags"
                   {}
                 end
@@ -58,7 +57,6 @@ class DatabagsController < ApplicationController
       raise HTTPStatus::NotFound, "Cannot find databag #{params[:id]}" unless @databag
       display @databag
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       @databags = Chef::DataBag.list
       flash[:error] = "Could not load databag"
       render :index

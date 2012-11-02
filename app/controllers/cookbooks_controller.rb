@@ -61,7 +61,6 @@ class CookbooksController < ApplicationController
       @manifest = @cookbook.manifest
       display @cookbook
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       flash[:error] = $!
       @cl = {}
       render :index
@@ -177,7 +176,6 @@ class CookbooksController < ApplicationController
         ans
       end
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       flash[:error] = $!
       {}
     end

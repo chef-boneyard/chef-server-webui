@@ -190,7 +190,6 @@ class EnvironmentsController < ApplicationController
       # @cookbooks is a hash, keys are cookbook names, values are their URIs.
       @cookbooks = ChefServer::Client.get("cookbooks").keys.sort
     rescue Net::HTTPServerException => e
-      Chef::Log.error(format_exception(e))
       redirect_to new_environment_url, :error => "Could not load the list of available cookbooks."
     end
   end

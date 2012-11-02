@@ -34,7 +34,6 @@ class UsersController < ApplicationController
   def index
     @users = User.list
   rescue => e
-    Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
     set_user_and_redirect
   end
 
@@ -42,7 +41,6 @@ class UsersController < ApplicationController
   def edit
     @user = User.load(params[:id])
   rescue => e
-    Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
     set_user_and_redirect
   end
 
@@ -50,7 +48,6 @@ class UsersController < ApplicationController
   def show
     @user = User.load(params[:id])
   rescue => e
-    Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
     set_user_and_redirect
   end
 
@@ -70,7 +67,6 @@ class UsersController < ApplicationController
       render :edit
     end
   rescue => e
-    Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
     flash.now[:error] = "Could not update user #{@user.name}."
     render :edit
   end
@@ -78,7 +74,6 @@ class UsersController < ApplicationController
   def new
     @user = User.new
   rescue => e
-    Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
     set_user_and_redirect
   end
 
@@ -91,7 +86,6 @@ class UsersController < ApplicationController
       render :new
     end
   rescue => e
-    Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
     flash.now[:error] = "Could not create user"
     session[:level] != :admin ? set_user_and_redirect : (render :new)
   end
@@ -136,7 +130,6 @@ class UsersController < ApplicationController
       redirect_to :users, :notice => "User #{params[:id]} deleted successfully."
     end
   rescue => e
-    Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
     session[:level] != :admin ? set_user_and_redirect : redirect_to_list_users({ :error => $! })
   end
 

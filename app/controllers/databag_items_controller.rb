@@ -79,7 +79,6 @@ class DatabagItemsController < ApplicationController
       @databag_item = ChefServer::Client.get("data/#{params[:databag_id]}/#{params[:id]}")
       display @databag_item
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       redirect_to databag_databag_items_url(@databag_name), :error => "Could not show the databag item"
     end
   end
