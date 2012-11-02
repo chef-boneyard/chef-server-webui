@@ -61,22 +61,16 @@ ChefServerWebui::Application.routes.draw do
     resources :databag_items
   end
 
-  match '/login', :to => 'users#login', :as => :users_login
-  match '/logout', :to => 'users#logout', :as => :users_logout
-
-  match '/users', :to => 'users#index', :as => :users
-  match '/users/create', :to => 'users#create', :as => :users_create
-  match '/users/start', :to => 'users#start', :as => :users_start
-
-  match '/users/login', :to => 'users#login', :as => :users_login
-  match '/users/login_exec', :to => 'users#login_exec', :as => :users_login_exec
-  match '/users/complete', :to => 'users#complete', :as => :users_complete
-  match '/users/logout', :to => 'users#logout', :as => :users_logout
-  match '/users/new', :to => 'users#new', :as => :users_new
-  match '/users/:user_id/edit', :to => 'users#edit', :as => :users_edit
-  match '/users/:user_id', :to => 'users#show', :as => :users_show
-  match '/users/:user_id/delete', :only => :delete, :to => 'users#destroy', :as => :users_delete
-  match '/users/:user_id/update', :only => :put, :to => 'users#update', :as => :users_update
+  resources :users do
+    member do
+      get 'logout'
+      get 'complete'
+    end
+    collection do
+      get 'login'
+      post 'login_exec'
+    end
+  end
 
   match '/', :to => 'nodes#index', :as => :top
 end

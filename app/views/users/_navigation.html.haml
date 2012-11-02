@@ -3,10 +3,10 @@
     - if is_admin?
       %li{ :class => "first #{active == 'index' ? "active" : ''}"}= link_to('List', users_path)
     - if is_admin?
-      %li{ :class => (active == 'create' ? "active" : '')}= link_to('Create', users_new_path)
+      %li{ :class => (active == 'create' ? "active" : '')}= link_to('Create', new_user_path)
     - if active != 'create' && active != 'index'
-      %li{ :class => (active == 'show' ? "active" : '')}= link_to('Show', users_show_path)
+      %li{ :class => (active == 'show' ? "active" : '')}= link_to('Show', user_path(params[:user_id]))
       - if @user.admin || @user.name == params[:user_id]
-        %li{ :class => (active == 'edit' ? "active" : '')}= link_to('Edit', users_edit_path(params[:user_id]))
-        %li= link_to('Delete', users_delete_path(params[:user_id]), :method => "delete", :confirm => "Really delete user #{params[:user_id]}? There is no undo.")
+        %li{ :class => (active == 'edit' ? "active" : '')}= link_to('Edit', edit_user_path(params[:user_id]))
+        %li= link_to('Delete', user_path(params[:user_id]), :method => :delete, :confirm => "Really delete user #{params[:user_id]}? There is no undo.")
   .clear

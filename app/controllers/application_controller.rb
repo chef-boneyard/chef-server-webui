@@ -16,7 +16,7 @@ class ApplicationController < ActionController::Base
      end
    else
      self.store_location
-     redirect_to users_login_url, :alert => "You don't have access to that, please login."
+     redirect_to login_users_url, :notice => "You don't have access to that, please login."
    end
   end
 
@@ -33,7 +33,7 @@ class ApplicationController < ActionController::Base
   def logout_and_redirect_to_login
     cleanup_session
     @user = User.new
-    redirect_to users_login_url, :error => $!
+    redirect_to login_users_url, :error => $!
   end
 
   def require_admin

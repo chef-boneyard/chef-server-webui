@@ -3,4 +3,27 @@
     %h2.title= "Edit user: #{h @user.name}"
     .inner
       = render('navigation', :active => 'edit')
-  = render('form', :header => "Edit User #{@user.name}", :form_id => 'edit_user', :submit_name => "Save User", :submit_id => "edit_user_button", :form_for => 'edit', :form_url => users_update_path(@user.name) )
+
+  .content.formContainer
+    = form_for(@user, :html => { :class => "form"}) do |f|
+      = render "shared/error_messages", :target => @user
+      = f.hidden_field :name
+      %div.group.form
+        %p= f.label :password, :class => "label"
+        %p= f.password_field :password, :id => "user_new_password", :class => "password_field"
+        %span.description New password for the User. Keep blank if you do not want to change password.
+
+      %div.group.form
+        %p= f.label :password_confirmation, :class => "label"
+        %p= f.password_field :password_confirmation, :id => "user_confirm_new_password", :class =>"password_field"
+        %span.description Confirm new password for the User. Keep blank if you do not want to change password.
+
+      - if can_edit_admin?(@user.name)
+        %div.group
+          %p= f.label :admin, :class => "label"
+          %p= f.check_box :admin
+          %span.description Whether or not the User is an admin.
+
+      %div.group
+        .actions-bar
+          .actions= f.submit 'Save User', :id => 'edit_user_button', :class => 'button'

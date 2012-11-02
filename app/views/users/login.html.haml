@@ -1,14 +1,26 @@
 - content_for :sidebar_block_notice do
   %h4 Where do I get a Login?
   %p Any existing Admin level user can create new users.
-  %p To create the first user, please login with the default admin credential, which by default is:
-  %p username: admin, password: p@ssw0rd1 (May be different if you've set it in Chef::Config)
+  %p To create the first user, please login with the default admin credential, which by default is (both may be different if you've set it in Chef::Config):
+  %p <b>username</b>: #{Chef::Config[:web_ui_admin_user_name]}
+  %p <b>password</b>: #{Chef::Config[:web_ui_admin_default_password]}
   %b Please change the default password immediately after logging in!
 
 .block#block-forms
   .content
     %h2.title Login
     .inner
-  = render('form', :header => "Login", :form_id => 'login', :submit_name => "login", :submit_id => "login_button", :form_for => 'login', :form_url => users_login_exec_url)
+  .content
+  .inner
+    = form_tag login_exec_users_url, :method => :post, :id => 'login', :class => 'form' do
+      %div.group.form
+        %p= label_tag :name, "Username", :class => "label"
+        %p= text_field_tag "name", params.has_key?(:name) ? h(params[:name]) : @user.name
 
+      %div.group.form
+        %p= label_tag :password, nil, :class => "label"
+        %p= password_field_tag "password", "", :class => "password_field"
 
+      %div.group.form
+        .actions-bar
+          .actions= submit_tag 'login', :id => 'login_button', :class => 'button'

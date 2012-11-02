@@ -3,22 +3,25 @@
     %h2.title Create New User
     .inner
       = render('navigation', :active => 'create')
-    .content
-      .inner
-        %form.form{ :method => "get", "accept-charset" => "UTF-8", :action => users_create_path }
-          %table.table
-            %tr
-              %td= "Username"
-              %td= text_field_tag :name
-            %tr
-              %td= "Password"
-              %td= password_field_tag :password
-            %tr
-              %td= "Confirm Password"
-              %td= password_field_tag :password2
-            %tr
-              %td= "Admin"
-              %td= check_box_tag "admin", "1"
+    .content.formContainer
+      = form_for(@user, :html => { :class => "form"}) do |f|
+        = render "shared/error_messages", :target => @user
+        %div.group.form
+          %p= f.label :name, "Username", :class => "label"
+          %p= f.text_field :name
 
-          .group.navform
-            .button= submit_tag "Create"
+        %div.group.form
+          %p= f.label :password, :class => "label"
+          %p= f.password_field :password, :id => "user_new_password", :class => "password_field"
+
+        %div.group.form
+          %p= f.label :password_confirmation, :class => "label"
+          %p= f.password_field :password_confirmation, :id => "user_confirm_new_password", :class =>"password_field"
+
+        %div.group
+          %p= f.label :admin, :class => "label"
+          %p= f.check_box :admin
+
+        %div.group
+          .actions-bar
+            .actions= f.submit 'Create User', :id => 'edit_user_button', :class => 'button'

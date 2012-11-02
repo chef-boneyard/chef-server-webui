@@ -20,14 +20,60 @@ require 'digest/sha1'
 require 'chef/json_compat'
 
 class User
+  include ActiveModel::Naming
+  include ActiveModel::Conversion
+  include ActiveModel::Validations
+  include ActiveModel::MassAssignmentSecurity
 
-  attr_accessor :name, :validated, :admin
-  attr_reader   :password
+  #############################################################################
+  # Custom Validators
+  #############################################################################
+  class UniquenessValidator < ActiveModel::EachValidator
+    def validate_each(record, attribute, value)
+      begin
+        unique = User.load(value) ? false : true
+      rescue Net::HTTPServerException => e
+        unique = true if e.response.code == "404"
+      end
+      record.errors.add attribute, "must be unique" unless unique
+    end
+  end
+
+  attr_accessor :name, :validated, :admin, :password, :password_confirmation
+  attr_accessor :public_key
+
+  # TODO: delete when Erchef users enpoint is updated
+  attr_accessor :openid
+
+  # Rails compat methods
+  attr_accessor :persisted
+  alias_method :persisted?, :persisted # used by Rails to determine create vs update
+  alias :id :name
+
+  def new_record?
+    !persisted?
+  end
+
+  #############################################################################
+  # Validations
+  #############################################################################
+  validates :name, :presence => true,
+                   :uniqueness => {:on => :create}
+  validates :password, :length => { :minimum => 6 },
+                       :confirmation => true,
+                       :presence => { :on => :create }
 
   # Create a new User object.
-  def initialize(opts={})
-    @name, @password = opts['name'], opts['password']
-    @admin = false
+  def initialize(attributes={})
+    assign_attributes(attributes)
+    @admin = attributes['admin'] || false
+    @persisted = attributes['persisted'] || false
+  end
+
+  def assign_attributes(values, options = {})
+    sanitize_for_mass_assignment(values, options[:as]).each do |k, v|
+      send("#{k}=", v)
+    end
   end
 
   def name=(n)
@@ -35,15 +81,11 @@ class User
   end
 
   def admin?
-    admin
-  end
-
-  # Set the password for this object.
-  def set_password(password, confirm_password=password)
-    raise ArgumentError, "Passwords do not match" unless password == confirm_password
-    raise ArgumentError, "Password cannot be blank" if (password.nil? || password.length==0)
-    raise ArgumentError, "Password must be a minimum of 6 characters" if password.length < 6
-    @password = password
+    if admin.is_a?(String) && admin.blank?
+      nil
+    else
+      [true, 1, '1', 't', 'T', 'true', 'TRUE'].include?(admin)
+    end
   end
 
   # Serialize this object as a hash
@@ -52,16 +94,16 @@ class User
     recipes = Array.new
     result = {
       'name' => name,
-      'password' => password,
-      'admin' => admin
+      'admin' => admin?
     }
+    # ensures we don't send empty password values to Erchef
+    result['password'] = password unless password.blank?
     result.to_json(*a)
   end
 
   # Remove this User via the REST API
   def destroy
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    r.delete_rest("users/#{@name}")
+    Chef::REST.new(Chef::Config[:chef_server_url]).delete_rest("users/#{@name}")
   end
 
   # Save this User via the REST API
@@ -81,8 +123,7 @@ class User
 
   # Create the User via the REST API
   def create
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    r.post_rest("users", self)
+    Chef::REST.new(Chef::Config[:chef_server_url]).post_rest("users", self)
     self
   end
 
@@ -91,40 +132,32 @@ class User
   #############################################################################
 
   def self.authenticate(name, password)
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    r.post_rest("authenticate_user", {'name' => name, 'password' => password})
-  end
-
-  # Create a User from JSON
-  def self.json_create(o)
-    me = new(o)
-    me.admin = o["admin"]
-    me
-  end
-
-  def self.list(inflate=false)
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    if inflate
-      response = Hash.new
-      Chef::Search::Query.new(Chef::Config[:chef_server_url]).search(:user) do |n|
-        response[n.name] = n unless n.nil?
-      end
-      response
-    else
-      r.get_rest("users")
+    if user = self.load(name)
+      auth_data = {'name' => name, 'password' => password}
+      r = Chef::REST.new(Chef::Config[:chef_server_url])
+      result = r.post_rest("authenticate_user", auth_data)
+      user = nil unless result['verified']
+      user
     end
+  end
+
+  def self.list
+    Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("users")
   end
 
   # Load a User by name
   def self.load(name)
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    r.get_rest("users/#{name}")
+    user = nil
+    # return nil if name.blank?
+    begin
+      result = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("users/#{name}")
+      # persisted? is used by Rails to determine create vs update
+      result.merge!('persisted' => true) if result
+      user = User.new(result)
+    rescue Net::HTTPServerException => e
+      # user we are authenitcating as may not exist
+      raise e unless e.response.code == "404"
+    end
+    user
   end
-
-  # Whether or not there is an User with this key.
-  def self.has_key?(name)
-    raise "NOT YET IMPLEMENTED"
-    #Chef::CouchDB.new.has_key?("webui_user", name)
-  end
-
 end
