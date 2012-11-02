@@ -43,7 +43,7 @@ class DatabagsController < ApplicationController
 
   def index
     @databags = begin
-                  Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("data")
+                  ChefServer::Client.get("data")
                 rescue => e
                   Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                   flash[:error] = "Could not list databags"
@@ -54,8 +54,7 @@ class DatabagsController < ApplicationController
   def show
     begin
       @databag_name = params[:id]
-      r = Chef::REST.new(Chef::Config[:chef_server_url])
-      @databag = r.get_rest("data/#{params[:id]}")
+      @databag = ChefServer::Client.get("data/#{params[:id]}")
       raise NotFound unless @databag
       display @databag
     rescue => e
@@ -68,8 +67,7 @@ class DatabagsController < ApplicationController
 
   def destroy
     begin
-      r = Chef::REST.new(Chef::Config[:chef_server_url])
-      r.delete_rest("data/#{params[:id]}")
+      ChefServer::Client.delete("data/#{params[:id]}")
       redirect_to databags_url, :notice => "Data bag #{params[:id]} deleted successfully"
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")

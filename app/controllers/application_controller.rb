@@ -70,8 +70,7 @@ class ApplicationController < ActionController::Base
   # <Hash>:: A hash consisting of the short name of the file in :name, and the full path
   #   to the file in :file.
   def load_cookbook_segment(cookbook_id, segment)
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    cookbook = r.get_rest("cookbooks/#{cookbook_id}")
+    cookbook = ChefServer::Client.get("cookbooks/#{cookbook_id}")
 
     raise NotFound unless cookbook
 
@@ -106,9 +105,8 @@ class ApplicationController < ActionController::Base
 
   def syntax_highlight(file_url)
     Chef::Log.debug("fetching file from '#{file_url}' for highlighting")
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
     highlighted_file = nil
-    r.fetch(file_url) do |tempfile|
+    ChefServer::Client.fetch(file_url) do |tempfile|
       tokens = CodeRay.scan_file(tempfile.path, :ruby)
       highlighted_file = CodeRay.encode_tokens(tokens, :span)
     end
@@ -117,8 +115,7 @@ class ApplicationController < ActionController::Base
 
   def show_plain_file(file_url)
     Chef::Log.debug("fetching file from '#{file_url}' for highlighting")
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    r.fetch(file_url) do |tempfile|
+    ChefServer::Client.fetch(file_url) do |tempfile|
       if binary?(tempfile.path)
         return "Binary file not shown"
       elsif ((File.size(tempfile.path) / (1048576)) > 5)

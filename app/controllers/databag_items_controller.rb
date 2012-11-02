@@ -76,8 +76,7 @@ class DatabagItemsController < ApplicationController
     begin
       @databag_name = params[:databag_id]
       @databag_item_name = params[:id]
-      r = Chef::REST.new(Chef::Config[:chef_server_url])
-      @databag_item = r.get_rest("data/#{params[:databag_id]}/#{params[:id]}")
+      @databag_item = ChefServer::Client.get("data/#{params[:databag_id]}/#{params[:id]}")
       display @databag_item
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")

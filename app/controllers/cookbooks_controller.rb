@@ -56,8 +56,7 @@ class CookbooksController < ApplicationController
         return
       end
       cookbook_url = "cookbooks/#{cookbook_id}/#{@version}"
-      rest = Chef::REST.new(Chef::Config[:chef_server_url])
-      @cookbook = rest.get_rest(cookbook_url)
+      @cookbook = ChefServer::Client.get(cookbook_url)
       raise NotFound unless @cookbook
       @manifest = @cookbook.manifest
       display @cookbook
@@ -89,26 +88,22 @@ class CookbooksController < ApplicationController
   def recipe_files
     # node = params.has_key?('node') ? params[:node] : nil
     # @recipe_files = load_all_files(:recipes, node)
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    @recipe_files = r.get_rest("cookbooks/#{params[:id]}/recipes")
+    @recipe_files = ChefServer::Client.get("cookbooks/#{params[:id]}/recipes")
     display @recipe_files
   end
 
   def attribute_files
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    @recipe_files = r.get_rest("cookbooks/#{params[:id]}/attributes")
+    @recipe_files = ChefServer::Client.get("cookbooks/#{params[:id]}/attributes")
     display @attribute_files
   end
 
   def definition_files
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    @recipe_files = r.get_rest("cookbooks/#{params[:id]}/definitions")
+    @recipe_files = ChefServer::Client.get("cookbooks/#{params[:id]}/definitions")
     display @definition_files
   end
 
   def library_files
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    @recipe_files = r.get_rest("cookbooks/#{params[:id]}/libraries")
+    @recipe_files = ChefServer::Client.get("cookbooks/#{params[:id]}/libraries")
     display @lib_files
   end
 
@@ -172,7 +167,7 @@ class CookbooksController < ApplicationController
     url += "/#{opts[:cookbook]}" if opts[:cookbook]
     url += "?num_versions=#{num_versions}"
     begin
-      result = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest(url)
+      result = ChefServer::Client.get(url)
       result.inject({}) do |ans, (name, cb)|
         cb["versions"].each do |v|
           v["url"] = url(:show_specific_version_cookbook, :cookbook_id => name,

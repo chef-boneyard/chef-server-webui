@@ -128,8 +128,7 @@ class EnvironmentsController < ApplicationController
     # TODO: rescue loading the environment
     @environment = Chef::Environment.load(params[:environment_id])
     @cookbooks = begin
-                   r = Chef::REST.new(Chef::Config[:chef_server_url])
-                   r.get_rest("/environments/#{params[:environment_id]}/cookbooks").inject({}) do |res, (cookbook, url)|
+                   ChefServer::Client.get("/environments/#{params[:environment_id]}/cookbooks").inject({}) do |res, (cookbook, url)|
                      # we just want the cookbook name and the version
                      res[cookbook] = url.split('/').last
                      res
@@ -146,8 +145,7 @@ class EnvironmentsController < ApplicationController
     # TODO: rescue loading the environment
     @environment = Chef::Environment.load(params[:environment_id])
     @nodes = begin
-               r = Chef::REST.new(Chef::Config[:chef_server_url])
-               r.get_rest("/environments/#{params[:environment_id]}/nodes").keys.sort
+               ChefServer::Client.get("/environments/#{params[:environment_id]}/nodes").keys.sort
              rescue => e
                Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                flash[:error] = "Could not load nodes for environment #{params[:environment_id]}"
@@ -189,7 +187,7 @@ class EnvironmentsController < ApplicationController
   def load_cookbooks
     begin
       # @cookbooks is a hash, keys are cookbook names, values are their URIs.
-      @cookbooks = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("cookbooks").keys.sort
+      @cookbooks = ChefServer::Client.get("cookbooks").keys.sort
     rescue Net::HTTPServerException => e
       Chef::Log.error(format_exception(e))
       redirect_to new_environment_url, :error => "Could not load the list of available cookbooks."

@@ -15,8 +15,6 @@
 # limitations under the License.
 #
 
-require 'chef/config'
-require 'digest/sha1'
 require 'chef/json_compat'
 
 class User
@@ -103,17 +101,16 @@ class User
 
   # Remove this User via the REST API
   def destroy
-    Chef::REST.new(Chef::Config[:chef_server_url]).delete_rest("users/#{@name}")
+    ChefServer::Client.delete("users/#{@name}")
   end
 
   # Save this User via the REST API
   def save
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
     begin
-      r.put_rest("users/#{@name}", self)
+      ChefServer::Client.put("users/#{@name}", self)
     rescue Net::HTTPServerException => e
       if e.response.code == "404"
-        r.post_rest("users", self)
+        ChefServer::Client.post("users", self)
       else
         raise e
       end
@@ -123,7 +120,7 @@ class User
 
   # Create the User via the REST API
   def create
-    Chef::REST.new(Chef::Config[:chef_server_url]).post_rest("users", self)
+    ChefServer::Client.post("users", self)
     self
   end
 
@@ -134,15 +131,14 @@ class User
   def self.authenticate(name, password)
     if user = self.load(name)
       auth_data = {'name' => name, 'password' => password}
-      r = Chef::REST.new(Chef::Config[:chef_server_url])
-      result = r.post_rest("authenticate_user", auth_data)
+      result = ChefServer::Client.post("authenticate_user", auth_data)
       user = nil unless result['verified']
       user
     end
   end
 
   def self.list
-    Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("users")
+    ChefServer::Client.get("users")
   end
 
   # Load a User by name
@@ -150,7 +146,7 @@ class User
     user = nil
     # return nil if name.blank?
     begin
-      result = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("users/#{name}")
+      result = ChefServer::Client.get("users/#{name}")
       # persisted? is used by Rails to determine create vs update
       result.merge!('persisted' => true) if result
       user = User.new(result)
