@@ -52,7 +52,7 @@ dl dt { font-weight: bold; }
   padding-top: 2px;
 }
 
-div.roleFormContainer, div.nodeFormContainer, div.environmentFormContainer{
+div.formContainer, div.roleFormContainer, div.nodeFormContainer, div.environmentFormContainer{
   padding: 0 15px 15px;
   min-width:1050px;
 }
