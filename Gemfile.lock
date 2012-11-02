@@ -65,6 +65,9 @@ GEM
       railties (>= 3.1, < 4.1)
     highline (1.6.15)
     hike (1.2.1)
+    http_status_exceptions (0.3.0)
+      actionpack (>= 3)
+      rack (>= 1.2.1)
     i18n (0.6.1)
     ipaddress (0.8.0)
     journey (1.0.4)
@@ -160,6 +163,7 @@ DEPENDENCIES
   chef!
   coderay
   haml-rails
+  http_status_exceptions (~> 0.3.0)
   jquery-rails
   rails (= 3.2.2)
   therubyracer
