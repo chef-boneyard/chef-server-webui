@@ -27,7 +27,7 @@ class ApplicationController < ActionController::Base
   end
 
   def cleanup_session
-    [:user,:level, :environment].each { |n| session.delete(n) }
+    [:user, :level, :environment].each { |n| session.delete(n) }
   end
 
   def logout_and_redirect_to_login
@@ -134,8 +134,13 @@ class ApplicationController < ActionController::Base
     s.empty? || ( s.count( "^ -~", "^\r\n" ).fdiv(s.size) > 0.3 || s.index( "\x00" ))
   end
 
-  def str_to_bool(str)
-    str =~ /true/ ? true : false
+  # taken from ActiveRecord::ConnectionAdapters::Column
+  def value_to_boolean(value)
+    if value.is_a?(String) && value.blank?
+      nil
+    else
+      [true, 1, '1', 't', 'T', 'true', 'TRUE'].include?(value)
+    end
   end
 
   #for showing search result

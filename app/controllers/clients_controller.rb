@@ -71,7 +71,7 @@ class ClientsController < ApplicationController
     begin
       @client = Chef::ApiClient.new
       @client.name(params[:name])
-      @client.admin(str_to_bool(params[:admin])) if params[:admin]
+      @client.admin(value_to_boolean(params[:admin])) if params[:admin]
       response = @client.create
       @private_key = OpenSSL::PKey::RSA.new(response["private_key"])
       flash[:notice] = "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
