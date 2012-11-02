@@ -55,10 +55,8 @@ ChefServerWebui::Application.routes.draw do
 
   resources :clients
 
-  match "/databags/:databag_id/databag_items", :only => :get, :to => "databags#show", :id=>":databag_id"
-
   resources :databags do
-    resources :databag_items
+    resources :databag_items, :except => [:index, :show]
   end
 
   resources :users do

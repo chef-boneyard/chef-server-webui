@@ -25,11 +25,13 @@ class DatabagItemsController < ApplicationController
 
   def edit
     begin
+      @databag_name = params[:databag_id]
+      @databag_item_name = params[:id]
       @databag_item = Chef::DataBagItem.load(params[:databag_id], params[:id])
       @default_data = @databag_item.raw_data
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not load the databag item"
+      flash.now[:error] = "Could not load the databag item"
     end
   end
 
@@ -40,10 +42,14 @@ class DatabagItemsController < ApplicationController
       @databag_item.raw_data = Chef::JSONCompat.from_json(params[:json_data])
       raise HTTPStatus::Forbidden, "Updating id is not allowed" unless @databag_item.raw_data['id'] == params[:id] #to be consistent with other objects, changing id is not allowed.
       @databag_item.save
-      redirect_to databag_databag_items_url(params[:databag_id], @databag_item.name), :notice => "Updated Databag Item #{@databag_item.name}"
+      redirect_to databag_url(params[:databag_id], @databag_item.name), :notice => "Updated Databag Item #{@databag_item.name}"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not update the databag item"
+      if e.kind_of?(Chef::Exceptions::InvalidDataBagItemID)
+        flash.now[:error] = e.message
+      else
+        Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
+        flash.now[:error] = "Could not update the databag item"
+      end
       @databag_item = Chef::DataBagItem.load(params[:databag_id], params[:id])
       @default_data = @databag_item
       render :edit
@@ -61,10 +67,15 @@ class DatabagItemsController < ApplicationController
       @databag_item.data_bag @databag_name
       @databag_item.raw_data = Chef::JSONCompat.from_json(params[:json_data])
       @databag_item.create
-      redirect_to(databag_databag_items_url(@databag_name), :notice => "Databag item created successfully" )
+      redirect_to(databag_url(@databag_name), :notice => "Databag item created successfully" )
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not create databag item"
+      if e.kind_of?(Chef::Exceptions::InvalidDataBagItemID)
+        @default_data = {'id'=>''}
+        flash.now[:error] = e.message
+      else
+        Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
+        flash.now[:error] = "Could not create databag item"
+      end
       render :new
     end
   end
@@ -77,7 +88,6 @@ class DatabagItemsController < ApplicationController
       @databag_name = params[:databag_id]
       @databag_item_name = params[:id]
       @databag_item = ChefServer::Client.get("data/#{params[:databag_id]}/#{params[:id]}")
-      display @databag_item
     rescue => e
       redirect_to databag_databag_items_url(@databag_name), :error => "Could not show the databag item"
     end
@@ -87,7 +97,7 @@ class DatabagItemsController < ApplicationController
     begin
       @databag_item = Chef::DataBagItem.new
       @databag_item.destroy(databag_id, item_id)
-      redirect_to databag_databag_items_url(databag_id), :notice => "Databag item deleted successfully"
+      redirect_to databag_url(databag_id), :notice => "Databag item deleted successfully"
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       redirect_to databag_databag_items_url(databag_id), :error => "Could not delete databag item"

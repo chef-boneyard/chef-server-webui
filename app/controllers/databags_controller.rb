@@ -54,13 +54,14 @@ class DatabagsController < ApplicationController
   def show
     begin
       @databag = ChefServer::Client.get("data/#{params[:id]}")
-      raise HTTPStatus::NotFound, "Cannot find databag #{params[:id]}" unless @databag
-      display @databag
+      @databag_name = params[:id]
     rescue => e
       @databags = Chef::DataBag.list
       flash[:error] = "Could not load databag"
       render :index
     end
+    raise HTTPStatus::NotFound, "Cannot find databag #{params[:id]}" unless @databag
+    render :show
   end
 
   def destroy
