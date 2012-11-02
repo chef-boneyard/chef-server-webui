@@ -21,7 +21,9 @@ require 'chef/api_client'
 class ClientsController < ApplicationController
   respond_to :html, :json
   before_filter :login_required
-  before_filter :require_admin, :exclude => [:index, :show]
+  before_filter :exclude => [:index, :show] do |controller|
+    controller.require_admin(self)
+  end
 
   # GET /clients
   def index
@@ -61,7 +63,6 @@ class ClientsController < ApplicationController
 
   # GET /clients/new
   def new
-    raise AdminAccessRequired unless params[:user_id] == session[:user] unless session[:level] == :admin
     @client = Chef::ApiClient.new
     respond_with @client
   end

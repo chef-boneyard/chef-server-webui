@@ -49,6 +49,7 @@ class EnvironmentsController < ApplicationController
 
   # POST /environments
   def create
+    raise HTTPStatus::BadRequest, "Environment name cannot be blank" if params[:name].blank?
     @environment = Chef::Environment.new
     if @environment.update_from_params(processed_params=process_params)
       begin

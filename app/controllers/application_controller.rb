@@ -23,7 +23,7 @@ class ApplicationController < ActionController::Base
   def load_session_user
     User.load(session[:user])
   rescue
-    raise NotFound, "Cannot find User #{session[:user]}, maybe it got deleted by an Administrator."
+    raise HTTPStatus::NotFound, "Cannot find User #{session[:user]}, maybe it got deleted by an Administrator."
   end
 
   def cleanup_session
@@ -36,8 +36,19 @@ class ApplicationController < ActionController::Base
     redirect_to login_users_url, :error => $!
   end
 
-  def require_admin
-    raise AdminAccessRequired unless is_admin?
+  def require_admin(calling_controller=nil)
+    unless is_admin?
+      msg = "You are not authorized to perform this action!"
+      if calling_controller
+        resource_name = calling_controller.class.to_s.underscore.split('_').first
+        action_name = case calling_controller.action_name
+                      when "new"; "create"
+                      when "index"; "list"
+                      else calling_controller.action_name; end
+        msg = "You are not authorized to #{action_name} #{resource_name}!"
+      end
+      raise HTTPStatus::Unauthorized, msg
+    end
   end
 
   # Store the URI of the current request in the session.
@@ -72,7 +83,7 @@ class ApplicationController < ActionController::Base
   def load_cookbook_segment(cookbook_id, segment)
     cookbook = ChefServer::Client.get("cookbooks/#{cookbook_id}")
 
-    raise NotFound unless cookbook
+    raise HTTPStatus::NotFound unless cookbook
 
     files_list = segment_files(segment, cookbook)
 
@@ -98,7 +109,7 @@ class ApplicationController < ActionController::Base
     when :libraries
       files_list = cookbook["libraries"]
     else
-      raise ArgumentError, "segment must be one of :attributes, :recipes, :definitions or :libraries"
+      raise HTTPStatus::Forbidden, "segment must be one of :attributes, :recipes, :definitions or :libraries"
     end
     files_list
   end

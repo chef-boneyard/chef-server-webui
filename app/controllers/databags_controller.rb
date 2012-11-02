@@ -29,6 +29,7 @@ class DatabagsController < ApplicationController
   end
 
   def create
+    raise HTTPStatus::BadRequest, "Databag name cannot be blank" if params[:name].blank?
     begin
       @databag = Chef::DataBag.new
       @databag.name params[:name]
@@ -53,9 +54,8 @@ class DatabagsController < ApplicationController
 
   def show
     begin
-      @databag_name = params[:id]
       @databag = ChefServer::Client.get("data/#{params[:id]}")
-      raise NotFound unless @databag
+      raise HTTPStatus::NotFound, "Cannot find databag #{params[:id]}" unless @databag
       display @databag
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")

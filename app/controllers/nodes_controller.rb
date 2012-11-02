@@ -86,13 +86,13 @@ class NodesController < ApplicationController
   end
 
   def create
+    raise HTTPStatus::BadRequest, "Node name cannot be blank" if params[:name].blank?
     begin
       @node = Chef::Node.new
       @node.name params[:name]
       @node.chef_environment params[:chef_environment]
       @node.normal_attrs = Chef::JSONCompat.from_json(params[:attributes])
       @node.run_list.reset!(params[:for_node] ? params[:for_node] : [])
-      raise ArgumentError, "Node name cannot be blank" if (params[:name].nil? || params[:name].length==0)
       @node.create
       redirect_to nodes_url, :notice => "Created Node #{@node.name}"
     rescue => e

@@ -57,7 +57,7 @@ class CookbooksController < ApplicationController
       end
       cookbook_url = "cookbooks/#{cookbook_id}/#{@version}"
       @cookbook = ChefServer::Client.get(cookbook_url)
-      raise NotFound unless @cookbook
+      raise HTTPStatus::NotFound, "Cannot find cookbook #{cookbook_id} (@version)" unless @cookbook
       @manifest = @cookbook.manifest
       display @cookbook
     rescue => e

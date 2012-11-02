@@ -91,6 +91,7 @@ class RolesController < ApplicationController
 
   # POST /roles
   def create
+    raise HTTPStatus::BadRequest, "Role name cannot be blank" if params[:name].blank?
     begin
       @role = Chef::Role.new
       @role.name(params[:name])

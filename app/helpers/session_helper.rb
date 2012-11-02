@@ -33,4 +33,12 @@ module SessionHelper
       false
     end
   end
+
+  def delete_user_check!(user)
+    if session[:user] == user && is_last_admin?
+      raise HTTPStatus::Forbidden, "The last admin user cannot be deleted"
+    elsif !is_admin?
+      raise HTTPStatus::Forbidden, "A non-admin user can only delete itself"
+    end
+  end
 end

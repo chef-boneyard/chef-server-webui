@@ -15,13 +15,20 @@
 # limitations under the License.
 #
 
-require 'uri'
-
 class UsersController < ApplicationController
 
   respond_to :html
+
   before_filter :login_required, :except => [:login, :login_exec, :complete]
-  before_filter :require_admin, :except => [:login, :login_exec, :complete, :show, :edit, :logout, :destroy]
+  before_filter :except => [:login, :login_exec, :complete,
+                            :show, :edit, :logout, :destroy] do |controller|
+
+    controller.require_admin(self)
+  end
+
+  before_filter :only => :destroy do |controller|
+    delete_user_check!(params[:id])
+  end
 
   # List users, only if the user is admin.
   def index
@@ -120,13 +127,14 @@ class UsersController < ApplicationController
   end
 
   def destroy
-    # TODO: raise non-Merb exceptions
-    raise Forbidden, "A non-admin user can only delete itself" if (params[:id] != session[:user] && session[:level] != :admin)
-    raise Forbidden, "The last admin user cannot be deleted" if (is_admin? && is_last_admin? && session[:user] == params[:id])
     @user = User.load(params[:id])
     @user.destroy
-    logout if params[:id] == session[:user]
-    redirect_to :users, :notice => "User #{params[:id]} deleted successfully."
+
+    if params[:id] == session[:user]
+      logout
+    else
+      redirect_to :users, :notice => "User #{params[:id]} deleted successfully."
+    end
   rescue => e
     Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
     session[:level] != :admin ? set_user_and_redirect : redirect_to_list_users({ :error => $! })
