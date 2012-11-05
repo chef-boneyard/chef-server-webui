@@ -10,11 +10,15 @@
             = @client.admin
           .left
             %h3 Public Key
-            %pre= convert_newline_to_br(@client.public_key)
+            %p
+              = text_area_tag 'public_key', @client.public_key, :rows => 10, :cols => 61
+              = clippy(h(@client.public_key))
           -unless @private_key.nil?
             .left
               %h3 Private Key (Will not show again, Please copy!)
               %h4.bold Please copy and save as the client's validation key (e.g. client.pem)
-              %pre= convert_newline_to_br(@private_key)
+              %p
+                = text_area_tag 'private_key', @private_key, :rows => 27, :cols => 61
+                = clippy @private_key
 
 

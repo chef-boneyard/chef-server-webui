@@ -41,4 +41,34 @@ module ApplicationHelper
   def convert_newline_to_br(string)
     string.to_s.gsub(/\n/, '<br />') unless string.nil?
   end
+
+  def clippy(text, bgcolor='#F4F4F6')
+    # Ensure text is properly escaped
+    text = Rack::Utils.escape(text)
+    html = <<-EOF
+      <object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000"
+              width="110"
+              height="14"
+              class="clippy" >
+      <param name="movie" value="#{asset_path("clippy.swf")}"/>
+      <param name="allowScriptAccess" value="always" />
+      <param name="quality" value="high" />
+      <param name="scale" value="noscale" />
+      <param NAME="FlashVars" value="text=#{text}">
+      <param name="bgcolor" value="#{bgcolor}">
+      <embed src="#{asset_path("clippy.swf")}"
+             width="110"
+             height="14"
+             name="clippy"
+             quality="high"
+             allowScriptAccess="always"
+             type="application/x-shockwave-flash"
+             pluginspage="http://www.macromedia.com/go/getflashplayer"
+             FlashVars="text=#{text}"
+             bgcolor="#{bgcolor}"
+      />
+      </object>
+    EOF
+    raw(html)
+  end
 end
