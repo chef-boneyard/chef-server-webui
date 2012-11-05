@@ -151,16 +151,6 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  #for showing search result
-  def determine_name(type, object)
-    case type
-    when :node, :role, :client, :environment
-      object.name
-    else
-      params[:id]
-    end
-  end
-
   def list_available_recipes_for(environment)
     ChefServer::Client.get("environments/#{environment}/recipes").sort!
   end

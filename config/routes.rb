@@ -35,13 +35,7 @@ ChefServerWebui::Application.routes.draw do
 
   match "/status", :to => "status#index", :as => :status, :only => :get
 
-  resources :searches, :path => "search", :controller => "search"
-  match "/search/:search_id/entries", :only => 'get', :to => "search_entries", :action => "index"
-  match "/search/:search_id/entries", :only => 'post', :to => "search_entries", :action => "create"
-  match "/search/:search_id/entries/:id", :only => 'get', :to => "search_entries", :action => "show"
-  match "/search/:search_id/entries/:id", :only => 'put', :to => "search_entries", :action => "create"
-  match "/search/:search_id/entries/:id", :only => 'post', :to => "search_entries", :action => "update"
-  match "/search/:search_id/entries/:id", :only => 'delete', :to => "search_entries", :action => "destroy"
+  resources :searches, :path => "search", :controller => "search", :only => [:index, :show]
 
   match "/cookbooks/_attribute_files", :to => "cookbooks#attribute_files"
   match "/cookbooks/_recipe_files", :to => "cookbooks#recipe_files"

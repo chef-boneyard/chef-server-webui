@@ -42,6 +42,14 @@ module ChefServer
       @client = Chef::REST.new(chef_server_url)
     end
 
+    def search(type, query)
+      Chef::Search::Query.new.search(type, query)
+    end
+
+    def list_search_indexes
+      Chef::Search::Query.new.list_indexes
+    end
+
     ###########################################################################
     # Class Methods
     ###########################################################################
@@ -65,7 +73,7 @@ module ChefServer
         end
       end
 
-      [:fetch].each do |method|
+      [:fetch, :search, :list_search_indexes].each do |method|
         define_method method do |*args|
           begin
             client.send(method, *args)

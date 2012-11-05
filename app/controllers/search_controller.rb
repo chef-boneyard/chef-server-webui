@@ -24,11 +24,9 @@ class SearchController < ApplicationController
   before_filter :login_required
 
   def index
-    @s = Chef::Search::Query.new
     @search_indexes = begin
-                        @s.list_indexes
+                        ChefServer::Client.list_search_indexes
                       rescue => e
-                        Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                         flash[:error] = "Could not list search indexes"
                         {}
                       end
@@ -36,9 +34,8 @@ class SearchController < ApplicationController
 
   def show
     begin
-      @s = Chef::Search::Query.new
       query = (params[:q].nil? || params[:q].empty?) ? "*:*" : URI.escape(params[:q], Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
-      @results = @s.search(params[:id], query)
+      @results = ChefServer::Client.search(params[:id], query)
       @type = if params[:id].to_s == "node" || params[:id].to_s == "role" || params[:id].to_s == "client" || params[:id].to_s == "environment"
                 params[:id]
               else
@@ -50,10 +47,7 @@ class SearchController < ApplicationController
       end
       @results
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Unable to find the #{params[:id]}. (#{$!})"
-      @search_indexes = @s.list_indexes
-      render :index
+      redirect_to :searches, :alert => "Unable to find the #{params[:id]}. (#{$!})"
     end
   end
 
