@@ -28,9 +28,8 @@ class RolesController < ApplicationController
   # GET /roles
   def index
     @role_list =  begin
-                   Chef::Role.list()
+                   ChefServer::Client.get("roles")
                   rescue => e
-                    Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                     flash[:error] = "Could not list roles"
                     {}
                   end
@@ -39,9 +38,8 @@ class RolesController < ApplicationController
   # GET /roles/:id
   def show
     @role = begin
-              Chef::Role.load(params[:id])
+              ChefServer::Client.get("roles/#{params[:id]}")
             rescue => e
-              Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
               flash[:error] = "Could not load role #{params[:id]}."
               Chef::Role.new
             end
@@ -56,8 +54,8 @@ class RolesController < ApplicationController
   def new
     begin
       @role = Chef::Role.new
-      @available_roles = Chef::Role.list.keys.sort
-      @environments = Chef::Environment.list.keys.sort
+      @available_roles = ChefServer::Client.get("roles").keys.sort
+      @environments = ChefServer::Client.get("environments").keys.sort
       @run_lists = @environments.inject({}) { |run_lists, env| run_lists[env] = @role.env_run_lists[env]; run_lists}
       @current_env = "_default"
       @available_recipes = list_available_recipes_for(@current_env)
@@ -66,16 +64,16 @@ class RolesController < ApplicationController
       @existing_run_list_environments.unshift('')
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to roles_url, :error => "Could not load available recipes, roles, or the run list."
+      redirect_to roles_url, :alert => "Could not load available recipes, roles, or the run list."
     end
   end
 
   # GET /roles/:id/edit
   def edit
     begin
-      @role = Chef::Role.load(params[:id])
-      @available_roles = Chef::Role.list.keys.sort
-      @environments = Chef::Environment.list.keys.sort
+      @role = ChefServer::Client.get("roles/#{params[:id]}")
+      @available_roles = ChefServer::Client.get("roles").keys.sort
+      @environments = ChefServer::Client.get("environments").keys.sort
       @current_env = session[:environment] || "_default"
       @run_list = @role.run_list
       @run_lists = @environments.inject({}) { |run_lists, env| run_lists[env] = @role.env_run_lists[env]; run_lists}
@@ -85,54 +83,72 @@ class RolesController < ApplicationController
       @available_recipes = list_available_recipes_for(@current_env)
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to roles_url, :error => "Could not load role #{params[:id]}. #{e.message}"
+      redirect_to roles_url, :alert => "Could not load role #{params[:id]}. #{e.message}"
     end
   end
 
   # POST /roles
   def create
-    raise HTTPStatus::BadRequest, "Role name cannot be blank" if params[:name].blank?
+    #raise HTTPStatus::BadRequest, "Role name cannot be blank" if params[:name].blank?
     begin
       @role = Chef::Role.new
       @role.name(params[:name])
-      @role.env_run_lists(params[:env_run_lists])
+      @role.env_run_lists(normalize_env_run_lists(params[:env_run_lists]))
       @role.description(params[:description]) if params[:description] != ''
       @role.default_attributes(Chef::JSONCompat.from_json(params[:default_attributes])) if params[:default_attributes] != ''
       @role.override_attributes(Chef::JSONCompat.from_json(params[:override_attributes])) if params[:override_attributes] != ''
-      @role.create
+      ChefServer::Client.post("roles", @role)
       redirect_to roles_url, :notice => "Created Role #{@role.name}"
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to new_role_url, :error => "Could not create role. #{e.message}"
+      redirect_to new_role_url, :alert => "Could not create role. #{e.message}"
     end
   end
 
   # PUT /roles/:id
   def update
     begin
-      @role = Chef::Role.load(params[:id])
-      @role.env_run_lists(params[:env_run_lists])
+      @role = ChefServer::Client.get("roles/#{params[:id]}")
+      @role.env_run_lists(normalize_env_run_lists(params[:env_run_lists]))
       @role.description(params[:description]) if params[:description] != ''
       @role.default_attributes(Chef::JSONCompat.from_json(params[:default_attributes])) if params[:default_attributes] != ''
       @role.override_attributes(Chef::JSONCompat.from_json(params[:override_attributes])) if params[:override_attributes] != ''
-      @role.save
+      ChefServer::Client.put("roles/#{params[:id]}", @role)
       redirect_to role_url(params[:id]), :notice => "Updated Role"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to edit_role_url(params[:id]), :error => "Could not update role #{params[:id]}. #{e.message}"
+      redirect_to edit_role_url(params[:id]), :alert => "Could not update role #{params[:id]}. #{e.message}"
     end
   end
 
   # DELETE /roles/:id
   def destroy
     begin
-      @role = Chef::Role.load(params[:id])
-      @role.destroy
-      redirect_to roles_url, :notice => "Role #{@role.name} deleted successfully."
+      ChefServer::Client.delete("roles/#{params[:id]}")
+      redirect_to roles_url, :notice => "Role #{params[:id]} deleted successfully."
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to roles_url, :error => "Could not delete role #{params[:id]}"
+      redirect_to roles_url, :alert => "Could not delete role #{params[:id]}"
     end
+  end
+
+  private
+
+  # Ensures we don't send Erchef invalid run_list values..ie:
+  #
+  #    "run_list":["recipe[]"]
+  #
+  # Basically we want to ensure we turn:
+  #
+  #    {"_default" => ""}
+  #
+  # into
+  #
+  #    {"_default" => []}
+  #
+  def normalize_env_run_lists(env_run_lists)
+    # Make sure we aren't dealing with an ActiveSupport::HashWithIndifferentAccess
+    erl = env_run_lists.to_hash
+    # LOOk...it's Hash#map
+    erl.merge(erl){|k,v| v.blank? ? [] : v }
   end
 
 end

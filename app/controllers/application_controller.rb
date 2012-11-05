@@ -33,7 +33,7 @@ class ApplicationController < ActionController::Base
   def logout_and_redirect_to_login
     cleanup_session
     @user = User.new
-    redirect_to login_users_url, :error => $!
+    redirect_to login_users_url, :alert => $!
   end
 
   def require_admin(calling_controller=nil)
@@ -162,7 +162,7 @@ class ApplicationController < ActionController::Base
   end
 
   def list_available_recipes_for(environment)
-    Chef::Environment.load_filtered_recipe_list(environment).sort!
+    ChefServer::Client.get("environments/#{environment}/recipes").sort!
   end
 
   def format_exception(exception)

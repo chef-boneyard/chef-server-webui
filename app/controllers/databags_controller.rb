@@ -29,15 +29,18 @@ class DatabagsController < ApplicationController
   end
 
   def create
-    raise HTTPStatus::BadRequest, "Databag name cannot be blank" if params[:name].blank?
     begin
       @databag = Chef::DataBag.new
+      Chef::DataBag.validate_name!(params[:name])
       @databag.name params[:name]
-      @databag.create
+      ChefServer::Client.post("data", @databag)
       redirect_to databags_url, :notice => "Created Databag #{@databag.name}"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not create databag"
+      if e.kind_of?(Chef::Exceptions::InvalidDataBagName)
+        flash.now[:error] = e.message
+      else
+        flash.now[:error] = "Could not create databag"
+      end
       render :new
     end
   end
@@ -57,7 +60,7 @@ class DatabagsController < ApplicationController
       @databag_name = params[:id]
     rescue => e
       @databags = Chef::DataBag.list
-      flash[:error] = "Could not load databag"
+      flash.now[:error] = "Could not load databag"
       render :index
     end
     raise HTTPStatus::NotFound, "Cannot find databag #{params[:id]}" unless @databag
@@ -71,7 +74,7 @@ class DatabagsController < ApplicationController
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       @databags = Chef::DataBag.list
-      flash[:error] = "Could not delete databag"
+      flash.now[:error] = "Could not delete databag"
       render :index
     end
   end

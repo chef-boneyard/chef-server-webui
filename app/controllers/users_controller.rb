@@ -141,7 +141,7 @@ class UsersController < ApplicationController
     rescue
       logout_and_redirect_to_login
     else
-      redirect_to user_url(session[:user]), :error => $!
+      redirect_to user_url(session[:user]), :alert => $!
     end
   end
 

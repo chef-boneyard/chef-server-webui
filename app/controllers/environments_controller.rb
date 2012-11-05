@@ -53,16 +53,16 @@ class EnvironmentsController < ApplicationController
     @environment = Chef::Environment.new
     if @environment.update_from_params(processed_params=process_params)
       begin
-        @environment.create
+        ChefServer::Client.post("environments", @environment)
         redirect_to environments_url :notice => "Created Environment #{@environment.name}"
       rescue Net::HTTPServerException => e
         if conflict?(e)
           Chef::Log.debug("Got 409 conflict creating environment #{params[:name]}\n#{format_exception(e)}")
-          redirect_to new_environment_url, :error => "An environment with that name already exists"
+          redirect_to new_environment_url, :alert => "An environment with that name already exists"
         elsif forbidden?(e)
           # Currently it's not possible to get 403 here. I leave the code here for completeness and may be useful in the future.[nuo]
           Chef::Log.debug("Got 403 forbidden creating environment #{params[:name]}\n#{format_exception(e)}")
-          redirect_to new_environment_url, :error => "Permission Denied. You do not have permission to create an environment."
+          redirect_to new_environment_url, :alert => "Permission Denied. You do not have permission to create an environment."
         else
           Chef::Log.error("Error communicating with the API server\n#{format_exception(e)}")
           raise
@@ -91,13 +91,13 @@ class EnvironmentsController < ApplicationController
     load_environment
     if @environment.update_from_params(process_params(params[:id]))
       begin
-        @environment.save
+        ChefServer::Client.put("environments/#{params[:id]}", @environment)
         redirect_to environment_url(@environment.name), :notice => "Updated Environment #{@environment.name}"
       rescue Net::HTTPServerException => e
         if forbidden?(e)
           # Currently it's not possible to get 403 here. I leave the code here for completeness and may be useful in the future.[nuo]
           Chef::Log.debug("Got 403 forbidden updating environment #{params[:name]}\n#{format_exception(e)}")
-          redirect_to edit_environment_url, :error => "Permission Denied. You do not have permission to update an environment."
+          redirect_to edit_environment_url, :alert => "Permission Denied. You do not have permission to update an environment."
         else
           Chef::Log.error("Error communicating with the API server\n#{format_exception(e)}")
           raise
@@ -113,9 +113,8 @@ class EnvironmentsController < ApplicationController
   # DELETE /environments/:id
   def destroy
     begin
-      @environment = Chef::Environment.load(params[:id])
-      @environment.destroy
-      redirect_to environments_url, :notice => "Environment #{@environment.name} deleted successfully."
+      ChefServer::Client.delete("environments/#{params[:id]}")
+      redirect_to environments_url, :notice => "Environment #{params[:id]} deleted successfully."
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
       @environment_list = Chef::Environment.list()
@@ -127,7 +126,7 @@ class EnvironmentsController < ApplicationController
   # GET /environments/:environment_id/cookbooks
   def list_cookbooks
     # TODO: rescue loading the environment
-    @environment = Chef::Environment.load(params[:environment_id])
+    load_environment
     @cookbooks = begin
                    ChefServer::Client.get("/environments/#{params[:environment_id]}/cookbooks").inject({}) do |res, (cookbook, url)|
                      # we just want the cookbook name and the version
@@ -144,7 +143,7 @@ class EnvironmentsController < ApplicationController
   # GET /environments/:environment_id/nodes
   def list_nodes
     # TODO: rescue loading the environment
-    @environment = Chef::Environment.load(params[:environment_id])
+    load_environment
     @nodes = begin
                ChefServer::Client.get("/environments/#{params[:environment_id]}/nodes").keys.sort
              rescue => e
@@ -175,11 +174,11 @@ class EnvironmentsController < ApplicationController
   private
 
   def load_environment
+    id = params[:id] || params[:environment_id]
     @environment = begin
-      Chef::Environment.load(params[:id])
+      ChefServer::Client.get("environments/#{id}")
     rescue Net::HTTPServerException => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not load environment #{params[:id]}"
+      flash[:error] = "Could not load environment #{id}"
       @environment = Chef::Environment.new
       false
     end
@@ -190,7 +189,7 @@ class EnvironmentsController < ApplicationController
       # @cookbooks is a hash, keys are cookbook names, values are their URIs.
       @cookbooks = ChefServer::Client.get("cookbooks").keys.sort
     rescue Net::HTTPServerException => e
-      redirect_to new_environment_url, :error => "Could not load the list of available cookbooks."
+      redirect_to new_environment_url, :alert => "Could not load the list of available cookbooks."
     end
   end
 

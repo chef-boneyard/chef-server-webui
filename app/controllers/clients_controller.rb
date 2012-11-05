@@ -28,10 +28,9 @@ class ClientsController < ApplicationController
   # GET /clients
   def index
     begin
-      @clients_list = Chef::ApiClient.list().keys.sort
+      @clients_list = ChefServer::Client.get("clients").keys.sort
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not list clients"
+      flash.now[:error] = "Could not list clients"
       @clients_list = []
     end
     respond_with @clients_list
@@ -40,10 +39,9 @@ class ClientsController < ApplicationController
   # GET /clients/:id
   def show
     @client = begin
-                @client = Chef::ApiClient.load(params[:id])
+                ChefServer::Client.get("clients/#{params[:id]}")
               rescue => e
-                Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                flash[:error] = "Could not load client #{params[:id]}"
+                flash.now[:error] = "Could not load client #{params[:id]}"
                 Chef::ApiClient.new
               end
     respond_with @client
@@ -52,7 +50,7 @@ class ClientsController < ApplicationController
   # GET /clients/:id/edit
   def edit
     @client = begin
-                Chef::ApiClient.load(params[:id])
+                ChefServer::Client.get("clients/#{params[:id]}")
               rescue => e
                 Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                 flash[:error] = "Could not load client #{params[:id]}"
@@ -73,14 +71,13 @@ class ClientsController < ApplicationController
       @client = Chef::ApiClient.new
       @client.name(params[:name])
       @client.admin(value_to_boolean(params[:admin])) if params[:admin]
-      response = @client.create
+      response = ChefServer::Client.post("clients", @client)
       @private_key = OpenSSL::PKey::RSA.new(response["private_key"])
-      flash[:notice] = "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
-      @client = Chef::ApiClient.load(params[:name])
+      flash.now[:notice] = "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
+      @client = ChefServer::Client.get("clients/#{params[:name]}")
       render :show
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not create client"
+      flash.now[:error] = "Could not create client"
       render :new
     end
   end
@@ -88,18 +85,17 @@ class ClientsController < ApplicationController
   # PUT /clients/:id
   def update
     begin
-      @client = Chef::ApiClient.load(params[:id])
+      @client = ChefServer::Client.get("clients/#{params[:id]}")
       if params[:regen_private_key]
         @client.create_keys
         @private_key = @client.private_key
       end
       params[:admin] ? @client.admin(true) : @client.admin(false)
-      @client.save
-      flash[:notice] = @private_key.nil? ? "Updated Client" : "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
+      ChefServer::Client.put("clients/#{params[:id]}", @client)
+      flash.now[:notice] = @private_key.nil? ? "Updated Client" : "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
       render :show
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not update client"
+      flash.now[:error] = "Could not update client"
       render :edit
     end
   end
@@ -107,14 +103,10 @@ class ClientsController < ApplicationController
   # DELETE /clients/:id
   def destroy
     begin
-      @client = Chef::ApiClient.load(params[:id])
-      @client.destroy
+      ChefServer::Client.delete("clients/#{params[:id]}")
       redirect_to clients_url, :notice => "Client #{params[:id]} deleted successfully"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not delete client #{params[:id]}"
-      @clients_list = Chef::ApiClient.list()
-      render :index
+      redirect_to :clients, :alert => "Could not delete client #{params[:id]}"
     end
   end
 
