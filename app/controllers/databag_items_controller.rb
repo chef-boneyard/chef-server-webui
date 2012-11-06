@@ -40,7 +40,7 @@ class DatabagItemsController < ApplicationController
       @databag_item.data_bag params[:databag_id]
       @databag_item.raw_data = Chef::JSONCompat.from_json(params[:json_data])
       raise HTTPStatus::Forbidden, "Updating id is not allowed" unless @databag_item.raw_data['id'] == params[:id] #to be consistent with other objects, changing id is not allowed.
-      ChefServer::Client.put("data/#{params[:databag_id]}/#{params[:id]}", @databag_item)
+      client_with_actor.put("data/#{params[:databag_id]}/#{params[:id]}", @databag_item)
       redirect_to databag_url(params[:databag_id], @databag_item.name), :notice => "Updated Databag Item #{@databag_item.name}"
     rescue => e
       if e.kind_of?(Chef::Exceptions::InvalidDataBagItemID)
@@ -64,7 +64,7 @@ class DatabagItemsController < ApplicationController
       @databag_item = Chef::DataBagItem.new
       @databag_item.data_bag @databag_name
       @databag_item.raw_data = Chef::JSONCompat.from_json(params[:json_data])
-      ChefServer::Client.post("data/#{params[:databag_id]}", @databag_item)
+      client_with_actor.post("data/#{params[:databag_id]}", @databag_item)
       redirect_to(databag_url(@databag_name), :notice => "Databag item created successfully" )
     rescue => e
       if e.kind_of?(Chef::Exceptions::InvalidDataBagItemID)
@@ -85,7 +85,7 @@ class DatabagItemsController < ApplicationController
     begin
       @databag_name = params[:databag_id]
       @databag_item_name = params[:id]
-      @databag_item = ChefServer::Client.get("data/#{params[:databag_id]}/#{params[:id]}")
+      @databag_item = client_with_actor.get("data/#{params[:databag_id]}/#{params[:id]}")
     rescue => e
       redirect_to databag_databag_items_url(@databag_name), :alert => "Could not show the databag item"
     end
@@ -93,7 +93,7 @@ class DatabagItemsController < ApplicationController
 
   def destroy(databag_id=params[:databag_id], item_id=params[:id])
     begin
-      ChefServer::Client.delete("data/#{params[:databag_id]}/#{params[:id]}")
+      client_with_actor.delete("data/#{params[:databag_id]}/#{params[:id]}")
       redirect_to databag_url(databag_id), :notice => "Databag item deleted successfully"
     rescue => e
       redirect_to databag_databag_items_url(databag_id), :alert => "Could not delete databag item"

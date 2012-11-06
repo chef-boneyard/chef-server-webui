@@ -28,7 +28,7 @@ class ClientsController < ApplicationController
   # GET /clients
   def index
     begin
-      @clients_list = ChefServer::Client.get("clients").keys.sort
+      @clients_list = client_with_actor.get("clients").keys.sort
     rescue => e
       flash.now[:error] = "Could not list clients"
       @clients_list = []
@@ -39,7 +39,7 @@ class ClientsController < ApplicationController
   # GET /clients/:id
   def show
     @client = begin
-                ChefServer::Client.get("clients/#{params[:id]}")
+                client_with_actor.get("clients/#{params[:id]}")
               rescue => e
                 flash.now[:error] = "Could not load client #{params[:id]}"
                 Chef::ApiClient.new
@@ -50,7 +50,7 @@ class ClientsController < ApplicationController
   # GET /clients/:id/edit
   def edit
     @client = begin
-                ChefServer::Client.get("clients/#{params[:id]}")
+                client_with_actor.get("clients/#{params[:id]}")
               rescue => e
                 Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                 flash[:error] = "Could not load client #{params[:id]}"
@@ -71,10 +71,10 @@ class ClientsController < ApplicationController
       @client = Chef::ApiClient.new
       @client.name(params[:name])
       @client.admin(value_to_boolean(params[:admin])) if params[:admin]
-      response = ChefServer::Client.post("clients", @client)
+      response = client_with_actor.post("clients", @client)
       @private_key = OpenSSL::PKey::RSA.new(response["private_key"])
       flash.now[:notice] = "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
-      @client = ChefServer::Client.get("clients/#{params[:name]}")
+      @client = client_with_actor.get("clients/#{params[:name]}")
       render :show
     rescue => e
       flash.now[:error] = "Could not create client"
@@ -85,13 +85,13 @@ class ClientsController < ApplicationController
   # PUT /clients/:id
   def update
     begin
-      @client = ChefServer::Client.get("clients/#{params[:id]}")
+      @client = client_with_actor.get("clients/#{params[:id]}")
       if params[:regen_private_key]
         @client.create_keys
         @private_key = @client.private_key
       end
       params[:admin] ? @client.admin(true) : @client.admin(false)
-      ChefServer::Client.put("clients/#{params[:id]}", @client)
+      client_with_actor.put("clients/#{params[:id]}", @client)
       flash.now[:notice] = @private_key.nil? ? "Updated Client" : "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
       render :show
     rescue => e
@@ -103,7 +103,7 @@ class ClientsController < ApplicationController
   # DELETE /clients/:id
   def destroy
     begin
-      ChefServer::Client.delete("clients/#{params[:id]}")
+      client_with_actor.delete("clients/#{params[:id]}")
       redirect_to clients_url, :notice => "Client #{params[:id]} deleted successfully"
     rescue => e
       redirect_to :clients, :alert => "Could not delete client #{params[:id]}"

@@ -1,6 +1,19 @@
 class ApplicationController < ActionController::Base
   include SessionHelper
+  include ChefServerWebui::ApiClientHelper
   include Chef::Mixin::Checksum
+
+  # Make the logged-in user globally available in the current thread using the
+  # Thread.current hash.  We use an around filter to ensure the thread local
+  # variable is cleaned up before being used if this thread is recycled.
+  around_filter do |controller, action|
+    Thread.current[:current_user] = session[:user]
+    begin
+      action.call
+    ensure
+      Thread.current[:current_user] = nil
+    end
+  end
 
   before_filter :load_environments
 
@@ -67,7 +80,7 @@ class ApplicationController < ActionController::Base
   end
 
   def load_environments
-    @environments = Chef::Environment.list.keys.sort
+    @environments = client_with_actor.get("environments").keys.sort
   end
 
   # Load a cookbook and return a hash with a list of all the files of a
@@ -81,7 +94,7 @@ class ApplicationController < ActionController::Base
   # <Hash>:: A hash consisting of the short name of the file in :name, and the full path
   #   to the file in :file.
   def load_cookbook_segment(cookbook_id, segment)
-    cookbook = ChefServer::Client.get("cookbooks/#{cookbook_id}")
+    cookbook = client_with_actor.get("cookbooks/#{cookbook_id}")
 
     raise HTTPStatus::NotFound unless cookbook
 
@@ -117,7 +130,7 @@ class ApplicationController < ActionController::Base
   def syntax_highlight(file_url)
     Chef::Log.debug("fetching file from '#{file_url}' for highlighting")
     highlighted_file = nil
-    ChefServer::Client.fetch(file_url) do |tempfile|
+    client_with_actor.fetch(file_url) do |tempfile|
       tokens = CodeRay.scan_file(tempfile.path, :ruby)
       highlighted_file = CodeRay.encode_tokens(tokens, :span)
     end
@@ -126,7 +139,7 @@ class ApplicationController < ActionController::Base
 
   def show_plain_file(file_url)
     Chef::Log.debug("fetching file from '#{file_url}' for highlighting")
-    ChefServer::Client.fetch(file_url) do |tempfile|
+    client_with_actor.fetch(file_url) do |tempfile|
       if binary?(tempfile.path)
         return "Binary file not shown"
       elsif ((File.size(tempfile.path) / (1048576)) > 5)
@@ -152,7 +165,7 @@ class ApplicationController < ActionController::Base
   end
 
   def list_available_recipes_for(environment)
-    ChefServer::Client.get("environments/#{environment}/recipes").sort!
+    client_with_actor.get("environments/#{environment}/recipes").sort!
   end
 
   def format_exception(exception)

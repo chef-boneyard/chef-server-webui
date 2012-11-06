@@ -1,9 +1,9 @@
 - content_for :sidebar_block_notice do
   %h4 Where do I get a Login?
   %p Any existing Admin level user can create new users.
-  %p To create the first user, please login with the default admin credential, which by default is (both may be different if you've set it in Chef::Config):
-  %p <b>username</b>: #{Chef::Config[:web_ui_admin_user_name]}
-  %p <b>password</b>: #{Chef::Config[:web_ui_admin_default_password]}
+  %p To create the first user, please login with the default admin credential, which by default is (both may be different if you've set it in ChefServerWebui::Config):
+  %p <b>username</b>: #{ChefServerWebui::Config[:admin_user_name]}
+  %p <b>password</b>: #{ChefServerWebui::Config[:admin_default_password]}
   %b Please change the default password immediately after logging in!
 
 .block#block-forms

@@ -27,9 +27,8 @@ class EnvironmentsController < ApplicationController
   # GET /environments
   def index
     @environment_list = begin
-                          Chef::Environment.list
+                          client_with_actor.get("environments")
                         rescue => e
-                          Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                           flash[:error] = "Could not list environments"
                           {}
                         end
@@ -53,7 +52,7 @@ class EnvironmentsController < ApplicationController
     @environment = Chef::Environment.new
     if @environment.update_from_params(processed_params=process_params)
       begin
-        ChefServer::Client.post("environments", @environment)
+        client_with_actor.post("environments", @environment)
         redirect_to environments_url :notice => "Created Environment #{@environment.name}"
       rescue Net::HTTPServerException => e
         if conflict?(e)
@@ -91,7 +90,7 @@ class EnvironmentsController < ApplicationController
     load_environment
     if @environment.update_from_params(process_params(params[:id]))
       begin
-        ChefServer::Client.put("environments/#{params[:id]}", @environment)
+        client_with_actor.put("environments/#{params[:id]}", @environment)
         redirect_to environment_url(@environment.name), :notice => "Updated Environment #{@environment.name}"
       rescue Net::HTTPServerException => e
         if forbidden?(e)
@@ -113,13 +112,10 @@ class EnvironmentsController < ApplicationController
   # DELETE /environments/:id
   def destroy
     begin
-      ChefServer::Client.delete("environments/#{params[:id]}")
-      redirect_to environments_url, :notice => "Environment #{params[:id]} deleted successfully."
+      client_with_actor.delete("environments/#{params[:id]}")
+      redirect_to :environments, :notice => "Environment #{params[:id]} deleted successfully."
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      @environment_list = Chef::Environment.list()
-      flash[:error] = "Could not delete environment #{params[:id]}: #{e.message}"
-      render :index
+      redirect_to :environments, :alert => "Could not delete environment #{params[:id]}: #{e.message}"
     end
   end
 
@@ -128,7 +124,7 @@ class EnvironmentsController < ApplicationController
     # TODO: rescue loading the environment
     load_environment
     @cookbooks = begin
-                   ChefServer::Client.get("/environments/#{params[:environment_id]}/cookbooks").inject({}) do |res, (cookbook, url)|
+                   client_with_actor.get("/environments/#{params[:environment_id]}/cookbooks").inject({}) do |res, (cookbook, url)|
                      # we just want the cookbook name and the version
                      res[cookbook] = url.split('/').last
                      res
@@ -145,7 +141,7 @@ class EnvironmentsController < ApplicationController
     # TODO: rescue loading the environment
     load_environment
     @nodes = begin
-               ChefServer::Client.get("/environments/#{params[:environment_id]}/nodes").keys.sort
+               client_with_actor.get("/environments/#{params[:environment_id]}/nodes").keys.sort
              rescue => e
                Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                flash[:error] = "Could not load nodes for environment #{params[:environment_id]}"
@@ -176,7 +172,7 @@ class EnvironmentsController < ApplicationController
   def load_environment
     id = params[:id] || params[:environment_id]
     @environment = begin
-      ChefServer::Client.get("environments/#{id}")
+      client_with_actor.get("environments/#{id}")
     rescue Net::HTTPServerException => e
       flash[:error] = "Could not load environment #{id}"
       @environment = Chef::Environment.new
@@ -187,7 +183,7 @@ class EnvironmentsController < ApplicationController
   def load_cookbooks
     begin
       # @cookbooks is a hash, keys are cookbook names, values are their URIs.
-      @cookbooks = ChefServer::Client.get("cookbooks").keys.sort
+      @cookbooks = client_with_actor.get("cookbooks").keys.sort
     rescue Net::HTTPServerException => e
       redirect_to new_environment_url, :alert => "Could not load the list of available cookbooks."
     end

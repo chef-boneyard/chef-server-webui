@@ -56,7 +56,7 @@ class CookbooksController < ApplicationController
         return
       end
       cookbook_url = "cookbooks/#{cookbook_id}/#{@version}"
-      @cookbook = ChefServer::Client.get(cookbook_url)
+      @cookbook = client_with_actor.get(cookbook_url)
       raise HTTPStatus::NotFound, "Cannot find cookbook #{cookbook_id} (@version)" unless @cookbook
       @manifest = @cookbook.manifest
       display @cookbook
@@ -87,22 +87,22 @@ class CookbooksController < ApplicationController
   def recipe_files
     # node = params.has_key?('node') ? params[:node] : nil
     # @recipe_files = load_all_files(:recipes, node)
-    @recipe_files = ChefServer::Client.get("cookbooks/#{params[:id]}/recipes")
+    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/recipes")
     display @recipe_files
   end
 
   def attribute_files
-    @recipe_files = ChefServer::Client.get("cookbooks/#{params[:id]}/attributes")
+    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/attributes")
     display @attribute_files
   end
 
   def definition_files
-    @recipe_files = ChefServer::Client.get("cookbooks/#{params[:id]}/definitions")
+    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/definitions")
     display @definition_files
   end
 
   def library_files
-    @recipe_files = ChefServer::Client.get("cookbooks/#{params[:id]}/libraries")
+    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/libraries")
     display @lib_files
   end
 
@@ -166,7 +166,7 @@ class CookbooksController < ApplicationController
     url += "/#{opts[:cookbook]}" if opts[:cookbook]
     url += "?num_versions=#{num_versions}"
     begin
-      result = ChefServer::Client.get(url)
+      result = client_with_actor.get(url)
       result.inject({}) do |ans, (name, cb)|
         cb["versions"].each do |v|
           v["url"] = url(:show_specific_version_cookbook, :cookbook_id => name,

@@ -62,7 +62,7 @@ class UsersController < ApplicationController
 
     if @user.valid?(:update)
       @user.save
-      render :show
+      redirect_to :user, :notice => "Updated user #{@user.name}."
     else
       render :edit
     end
@@ -86,7 +86,7 @@ class UsersController < ApplicationController
       render :new
     end
   rescue => e
-    flash.now[:error] = "Could not create user"
+    flash.now[:error] = "Could not create user: #{$!}"
     session[:level] != :admin ? set_user_and_redirect : (render :new)
   end
 
@@ -104,8 +104,8 @@ class UsersController < ApplicationController
       session[:user] = params[:name]
       session[:level] = (@user.admin? ? :admin : :user)
       # Nag the admin to change the default password
-      if (@user.name == Chef::Config[:web_ui_admin_user_name] &&
-            User.authenticate(Chef::Config[:web_ui_admin_user_name], Chef::Config[:web_ui_admin_default_password]))
+      if (@user.name == ChefServerWebui::Config[:admin_user_name] &&
+            User.authenticate(ChefServerWebui::Config[:admin_user_name], ChefServerWebui::Config[:admin_default_password]))
         redirect_to(edit_user_url(@user.name), :flash => { :warning => "Please change the default password" })
       else
         redirect_back_or_default(:nodes)

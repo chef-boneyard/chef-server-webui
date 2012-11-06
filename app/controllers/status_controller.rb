@@ -26,17 +26,25 @@ class StatusController < ApplicationController
 
   def index
     begin
-      @status = Chef::Node.list(true)
-      if session[:environment]
-        @status = Chef::Node.list_by_environment(session[:environment],true)
+      @status = if session[:environment]
+        generate_status_hash("chef_environment:#{session[:environment]}")
       else
-        @status = Chef::Node.list(true)
+        generate_status_hash("*:*")
       end
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      @status = {}
-      flash[:error] = "Could not list status"
+     @status = {}
+     flash.now[:error] = "Could not list status"
     end
+  end
+
+  private
+
+  def generate_status_hash(query)
+    result = Hash.new
+    client.search(:node, query) do |n|
+      result[n.name] = n unless n.nil?
+    end
+    result
   end
 
 end

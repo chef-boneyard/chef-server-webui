@@ -22,17 +22,15 @@ class User
   include ActiveModel::Conversion
   include ActiveModel::Validations
   include ActiveModel::MassAssignmentSecurity
+  include ChefServerWebui::ApiClientHelper
+  extend ChefServerWebui::ApiClientHelper
 
   #############################################################################
   # Custom Validators
   #############################################################################
   class UniquenessValidator < ActiveModel::EachValidator
     def validate_each(record, attribute, value)
-      begin
-        unique = User.load(value) ? false : true
-      rescue Net::HTTPServerException => e
-        unique = true if e.response.code == "404"
-      end
+      unique = User.load(value) ? false : true
       record.errors.add attribute, "must be unique" unless unique
     end
   end
@@ -101,16 +99,16 @@ class User
 
   # Remove this User via the REST API
   def destroy
-    ChefServer::Client.delete("users/#{@name}")
+    client_with_actor.delete("users/#{@name}")
   end
 
   # Save this User via the REST API
   def save
     begin
-      ChefServer::Client.put("users/#{@name}", self)
+      client_with_actor.put("users/#{@name}", self)
     rescue Net::HTTPServerException => e
       if e.response.code == "404"
-        ChefServer::Client.post("users", self)
+        client_with_actor.post("users", self)
       else
         raise e
       end
@@ -120,7 +118,7 @@ class User
 
   # Create the User via the REST API
   def create
-    ChefServer::Client.post("users", self)
+    client_with_actor.post("users", self)
     self
   end
 
@@ -131,14 +129,15 @@ class User
   def self.authenticate(name, password)
     if user = self.load(name)
       auth_data = {'name' => name, 'password' => password}
-      result = ChefServer::Client.post("authenticate_user", auth_data)
+      # we don't use 'client_with_actor' since session[:user] is nil
+      result = client.post("authenticate_user", auth_data)
       user = nil unless result['verified']
       user
     end
   end
 
   def self.list
-    ChefServer::Client.get("users")
+    client_with_actor.get("users")
   end
 
   # Load a User by name
@@ -146,7 +145,7 @@ class User
     user = nil
     # return nil if name.blank?
     begin
-      result = ChefServer::Client.get("users/#{name}")
+      result = client.get("users/#{name}")
       # persisted? is used by Rails to determine create vs update
       result.merge!('persisted' => true) if result
       user = User.new(result)

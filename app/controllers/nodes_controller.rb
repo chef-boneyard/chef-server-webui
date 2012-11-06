@@ -29,19 +29,20 @@ class NodesController < ApplicationController
 
   def index
     node_hash = if session[:environment]
-                  ChefServer::Client.get("environments/#{session[:environment]}/nodes")
+                  client_with_actor.get("environments/#{session[:environment]}/nodes")
                 else
-                  ChefServer::Client.get("nodes")
+                  client_with_actor.get("nodes")
                 end
     @node_list = node_hash.keys.sort
   rescue => e
-    flash.local[:error] = "Could not list nodes"
-    @node_hash = {}
+    Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
+    flash.now[:error] = "Could not list nodes"
+    @node_list = {}
   end
 
   def show
     begin
-      @node = ChefServer::Client.get("nodes/#{params[:id]}")
+      @node = client_with_actor.get("nodes/#{params[:id]}")
     rescue => e
       flash.now[:error] = "Could not load node #{params[:id]}"
       @node = Chef::Node.new
@@ -53,7 +54,7 @@ class NodesController < ApplicationController
       @node = Chef::Node.new
       @node.chef_environment(session[:environment] || "_default")
       @available_recipes = list_available_recipes_for(@node.chef_environment)
-      @available_roles = ChefServer::Client.get("roles").keys.sort
+      @available_roles = client_with_actor.get("roles").keys.sort
       @run_list = @node.run_list
       @env = session[:environment]
     rescue => e
@@ -63,10 +64,10 @@ class NodesController < ApplicationController
 
   def edit
     begin
-      @node = ChefServer::Client.get("nodes/#{params[:id]}")
+      @node = client_with_actor.get("nodes/#{params[:id]}")
       @env = @node.chef_environment
       @available_recipes = list_available_recipes_for(@node.chef_environment)
-      @available_roles = ChefServer::Client.get("roles").keys.sort
+      @available_roles = client_with_actor.get("roles").keys.sort
       @run_list = @node.run_list
     rescue => e
       @node = Chef::Node.new
@@ -85,12 +86,12 @@ class NodesController < ApplicationController
       @node.chef_environment params[:chef_environment]
       @node.normal_attrs = Chef::JSONCompat.from_json(params[:attributes])
       @node.run_list.reset!(params[:for_node] ? params[:for_node] : [])
-      ChefServer::Client.post("nodes", @node)
+      client_with_actor.post("nodes", @node)
       redirect_to :nodes, :notice => "Created Node #{@node.name}"
     rescue => e
       @node.normal_attrs = Chef::JSONCompat.from_json(params[:attributes])
       @available_recipes = list_available_recipes_for(@node.chef_environment)
-      @available_roles = ChefServer::Client.get("roles").keys.sort
+      @available_roles = client_with_actor.get("roles").keys.sort
       @node.run_list params[:for_node]
       @run_list = @node.run_list
       flash.now[:error] = "Exception raised creating node, #{e.message.length <= 150 ? e.message : "please check logs for details"}"
@@ -100,16 +101,16 @@ class NodesController < ApplicationController
 
   def update
     begin
-      @node = ChefServer::Client.get("nodes/#{params[:id]}")
+      @node = client_with_actor.get("nodes/#{params[:id]}")
       @node.chef_environment(params[:chef_environment])
       @node.run_list.reset!(params[:for_node] ? params[:for_node] : [])
       @node.normal_attrs = Chef::JSONCompat.from_json(params[:attributes])
-      @node = ChefServer::Client.put("nodes/#{params[:id]}", @node)
+      @node = client_with_actor.put("nodes/#{params[:id]}", @node)
       flash.now[:notice] = "Updated Node"
       render :show
     rescue => e
       @available_recipes = list_available_recipes_for(@node.chef_environment)
-      @available_roles = ChefServer::Client.get("roles").keys.sort
+      @available_roles = client_with_actor.get("roles").keys.sort
       @run_list = Chef::RunList.new
       @run_list.reset!(params[:for_node])
       flash.now[:error] = "Exception raised updating node, #{e.message.length <= 150 ? e.message : "please check logs for details"}"
@@ -119,7 +120,7 @@ class NodesController < ApplicationController
 
   def destroy
     begin
-      ChefServer::Client.delete("nodes/#{params[:id]}")
+      client_with_actor.delete("nodes/#{params[:id]}")
       redirect_to :nodes, :notice => "Node #{params[:id]} deleted successfully"
     rescue => e
       redirect_to :nodes, :alert => "Could not delete the node"

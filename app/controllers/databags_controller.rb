@@ -33,7 +33,7 @@ class DatabagsController < ApplicationController
       @databag = Chef::DataBag.new
       Chef::DataBag.validate_name!(params[:name])
       @databag.name params[:name]
-      ChefServer::Client.post("data", @databag)
+      client_with_actor.post("data", @databag)
       redirect_to databags_url, :notice => "Created Databag #{@databag.name}"
     rescue => e
       if e.kind_of?(Chef::Exceptions::InvalidDataBagName)
@@ -47,7 +47,7 @@ class DatabagsController < ApplicationController
 
   def index
     @databags = begin
-                  ChefServer::Client.get("data")
+                  client_with_actor.get("data")
                 rescue => e
                   flash[:error] = "Could not list databags"
                   {}
@@ -56,7 +56,7 @@ class DatabagsController < ApplicationController
 
   def show
     begin
-      @databag = ChefServer::Client.get("data/#{params[:id]}")
+      @databag = client_with_actor.get("data/#{params[:id]}")
       @databag_name = params[:id]
     rescue => e
       @databags = Chef::DataBag.list
@@ -69,7 +69,7 @@ class DatabagsController < ApplicationController
 
   def destroy
     begin
-      ChefServer::Client.delete("data/#{params[:id]}")
+      client_with_actor.delete("data/#{params[:id]}")
       redirect_to databags_url, :notice => "Data bag #{params[:id]} deleted successfully"
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")

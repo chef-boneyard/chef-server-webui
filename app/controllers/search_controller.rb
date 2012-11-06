@@ -25,9 +25,10 @@ class SearchController < ApplicationController
 
   def index
     @search_indexes = begin
-                        ChefServer::Client.list_search_indexes
+                        client.list_search_indexes
                       rescue => e
-                        flash[:error] = "Could not list search indexes"
+                        Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
+                        flash.now[:error] = "Could not list search indexes"
                         {}
                       end
   end
@@ -35,7 +36,7 @@ class SearchController < ApplicationController
   def show
     begin
       query = (params[:q].nil? || params[:q].empty?) ? "*:*" : URI.escape(params[:q], Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
-      @results = ChefServer::Client.search(params[:id], query)
+      @results = client.search(params[:id], query)
       @type = if params[:id].to_s == "node" || params[:id].to_s == "role" || params[:id].to_s == "client" || params[:id].to_s == "environment"
                 params[:id]
               else

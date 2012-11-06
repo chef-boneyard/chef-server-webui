@@ -28,7 +28,7 @@ class RolesController < ApplicationController
   # GET /roles
   def index
     @role_list =  begin
-                   ChefServer::Client.get("roles")
+                   client_with_actor.get("roles")
                   rescue => e
                     flash[:error] = "Could not list roles"
                     {}
@@ -38,7 +38,7 @@ class RolesController < ApplicationController
   # GET /roles/:id
   def show
     @role = begin
-              ChefServer::Client.get("roles/#{params[:id]}")
+              client_with_actor.get("roles/#{params[:id]}")
             rescue => e
               flash[:error] = "Could not load role #{params[:id]}."
               Chef::Role.new
@@ -54,8 +54,8 @@ class RolesController < ApplicationController
   def new
     begin
       @role = Chef::Role.new
-      @available_roles = ChefServer::Client.get("roles").keys.sort
-      @environments = ChefServer::Client.get("environments").keys.sort
+      @available_roles = client_with_actor.get("roles").keys.sort
+      @environments = client_with_actor.get("environments").keys.sort
       @run_lists = @environments.inject({}) { |run_lists, env| run_lists[env] = @role.env_run_lists[env]; run_lists}
       @current_env = "_default"
       @available_recipes = list_available_recipes_for(@current_env)
@@ -71,9 +71,9 @@ class RolesController < ApplicationController
   # GET /roles/:id/edit
   def edit
     begin
-      @role = ChefServer::Client.get("roles/#{params[:id]}")
-      @available_roles = ChefServer::Client.get("roles").keys.sort
-      @environments = ChefServer::Client.get("environments").keys.sort
+      @role = client_with_actor.get("roles/#{params[:id]}")
+      @available_roles = client_with_actor.get("roles").keys.sort
+      @environments = client_with_actor.get("environments").keys.sort
       @current_env = session[:environment] || "_default"
       @run_list = @role.run_list
       @run_lists = @environments.inject({}) { |run_lists, env| run_lists[env] = @role.env_run_lists[env]; run_lists}
@@ -97,7 +97,7 @@ class RolesController < ApplicationController
       @role.description(params[:description]) if params[:description] != ''
       @role.default_attributes(Chef::JSONCompat.from_json(params[:default_attributes])) if params[:default_attributes] != ''
       @role.override_attributes(Chef::JSONCompat.from_json(params[:override_attributes])) if params[:override_attributes] != ''
-      ChefServer::Client.post("roles", @role)
+      client_with_actor.post("roles", @role)
       redirect_to roles_url, :notice => "Created Role #{@role.name}"
     rescue => e
       Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
@@ -108,12 +108,12 @@ class RolesController < ApplicationController
   # PUT /roles/:id
   def update
     begin
-      @role = ChefServer::Client.get("roles/#{params[:id]}")
+      @role = client_with_actor.get("roles/#{params[:id]}")
       @role.env_run_lists(normalize_env_run_lists(params[:env_run_lists]))
       @role.description(params[:description]) if params[:description] != ''
       @role.default_attributes(Chef::JSONCompat.from_json(params[:default_attributes])) if params[:default_attributes] != ''
       @role.override_attributes(Chef::JSONCompat.from_json(params[:override_attributes])) if params[:override_attributes] != ''
-      ChefServer::Client.put("roles/#{params[:id]}", @role)
+      client_with_actor.put("roles/#{params[:id]}", @role)
       redirect_to role_url(params[:id]), :notice => "Updated Role"
     rescue => e
       redirect_to edit_role_url(params[:id]), :alert => "Could not update role #{params[:id]}. #{e.message}"
@@ -123,7 +123,7 @@ class RolesController < ApplicationController
   # DELETE /roles/:id
   def destroy
     begin
-      ChefServer::Client.delete("roles/#{params[:id]}")
+      client_with_actor.delete("roles/#{params[:id]}")
       redirect_to roles_url, :notice => "Role #{params[:id]} deleted successfully."
     rescue => e
       redirect_to roles_url, :alert => "Could not delete role #{params[:id]}"

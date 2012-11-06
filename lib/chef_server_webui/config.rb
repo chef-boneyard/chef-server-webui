@@ -15,8 +15,17 @@
 # limitations under the License.
 #
 
-require "chef_server_webui/api_client_helper"
-require 'chef_server_webui/config'
-require 'chef_server_webui/version'
+require 'mixlib/config'
 
-CHEF_SERVER_WEBUI_VERSION = ::ChefServerWebui::VERSION
+module ChefServerWebui
+  class Config
+    extend Mixlib::Config
+
+    chef_server_url nil
+    rest_client_name nil
+    rest_client_key nil
+    rest_client_custom_http_headers {}
+    admin_user_name nil
+    admin_default_password nil
+  end
+end
