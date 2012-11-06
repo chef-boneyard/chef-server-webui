@@ -24,7 +24,7 @@ class NodesController < ApplicationController
 
   respond_to :html
 
-  before_filter :login_required
+  before_filter :require_login
   before_filter :require_admin, :only => [:destroy]
 
   def index

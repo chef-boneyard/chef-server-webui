@@ -21,7 +21,7 @@ require 'chef/data_bag_item'
 class DatabagItemsController < ApplicationController
 
   respond_to :html, :json
-  before_filter :login_required
+  before_filter :require_login
 
   def edit
     begin

@@ -7,50 +7,34 @@ class ApplicationController < ActionController::Base
   # Thread.current hash.  We use an around filter to ensure the thread local
   # variable is cleaned up before being used if this thread is recycled.
   around_filter do |controller, action|
-    Thread.current[:current_user] = session[:user]
+    if current_user = controller.current_user
+       Thread.current[:current_user_id] = controller.current_user.name
+    end
     begin
       action.call
     ensure
-      Thread.current[:current_user] = nil
+      Thread.current[:current_user_id] = nil
     end
   end
 
-  before_filter :load_environments
-
-  # Check if the user is logged in and if the user still exists
-  def login_required
-   if session[:user]
-     begin
-       load_session_user
-     rescue
-       logout_and_redirect_to_login
-     else
-       return session[:user]
-     end
-   else
-     self.store_location
-     redirect_to login_users_url, :notice => "You don't have access to that, please login."
-   end
   end
 
-  def load_session_user
-    User.load(session[:user])
-  rescue
-    raise HTTPStatus::NotFound, "Cannot find User #{session[:user]}, maybe it got deleted by an Administrator."
-  end
+  # load environments if we are logged in
+  before_filter {|controller| load_environments if logged_in?}
 
-  def cleanup_session
-    [:user, :level, :environment].each { |n| session.delete(n) }
-  end
+  #############################################################################
+  # Filters
+  #############################################################################
 
-  def logout_and_redirect_to_login
-    cleanup_session
-    @user = User.new
-    redirect_to login_users_url, :alert => $!
+  def require_login
+    unless logged_in?
+      self.store_location
+      redirect_to login_users_url, :notice => "You don't have access to that, please login."
+    end
   end
 
   def require_admin(calling_controller=nil)
-    unless is_admin?
+    unless current_user.admin?
       msg = "You are not authorized to perform this action!"
       if calling_controller
         resource_name = calling_controller.class.to_s.underscore.split('_').first
@@ -64,19 +48,8 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  # Store the URI of the current request in the session.
-  #
-  # We can return to this location by calling #redirect_back_or_default.
-  def store_location
-    session[:return_to] = request.url
   end
 
-  # Redirect to the URI stored by the most recent store_location call or
-  # to the passed default.
-  def redirect_back_or_default(default)
-    loc = session[:return_to] || default
-    session[:return_to] = nil
-    redirect_to loc
   end
 
   def load_environments

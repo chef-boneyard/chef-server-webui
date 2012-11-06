@@ -19,15 +19,27 @@ class UsersController < ApplicationController
 
   respond_to :html
 
-  before_filter :login_required, :except => [:login, :login_exec, :complete]
-  before_filter :except => [:login, :login_exec, :complete,
-                            :show, :edit, :logout, :destroy] do |controller|
+  before_filter :require_login, :except => [:login, :login_exec, :complete]
 
-    controller.require_admin(self)
+  # Ensure only admins try and create/delete users
+  before_filter :except => [:login, :login_exec, :complete, :show, :edit,
+                            :update, :logout] do |controller|
+
+    require_admin(self)
   end
 
+  # Ensure non-admin users are only taking action on themselves
+  before_filter :only => [:update, :destroy] do |controller|
+    unless (current_user.admin? || (params[:id] == current_user.name))
+      require_admin(self)
+    end
+  end
+
+  # Ensure the last admin doesn't try and delete themselves
   before_filter :only => :destroy do |controller|
-    delete_user_check!(params[:id])
+    if params[:id] == current_user.name && (current_user.last_admin?)
+      raise HTTPStatus::Forbidden, "The last admin user cannot be deleted"
+    end
   end
 
   # List users, only if the user is admin.
@@ -46,6 +58,7 @@ class UsersController < ApplicationController
 
   # Show the details of a user. If the user is not admin, only able to show itself; otherwise able to show everyone
   def show
+
     @user = User.load(params[:id])
   rescue => e
     set_user_and_redirect
@@ -56,8 +69,8 @@ class UsersController < ApplicationController
     @user = User.load(params[:id])
     @user.assign_attributes(params[:user])
 
-    if @user.name == session[:user] && !@user.admin?
-      session[:level] = :user
+    if @user.name == current_user.name && !@user.admin?
+      session[:current_user_level] = :user
     end
 
     if @user.valid?(:update)
@@ -87,26 +100,26 @@ class UsersController < ApplicationController
     end
   rescue => e
     flash.now[:error] = "Could not create user: #{$!}"
-    session[:level] != :admin ? set_user_and_redirect : (render :new)
+    session[:current_user_level] != :admin ? set_user_and_redirect : (render :new)
   end
 
   def login
     @user = User.new
-    if session[:user]
-      redirect_to :nodes, :flash => { :warning => "You've already logged in with user #{session[:user]}" }
+    if current_user
+      redirect_to :nodes, :flash => { :warning => "You've already logged in with user #{current_user.name}" }
     else
       render :layout => 'login'
     end
   end
 
   def login_exec
-    if @user = User.authenticate(params[:name], params[:password])
-      session[:user] = params[:name]
-      session[:level] = (@user.admin? ? :admin : :user)
+    if user = User.authenticate(params[:name], params[:password])
+      session[:current_user_id] = user.name
+      session[:current_user_level] = (user.admin? ? :admin : :user)
       # Nag the admin to change the default password
-      if (@user.name == ChefServerWebui::Config[:admin_user_name] &&
+      if (user.name == ChefServerWebui::Config[:admin_user_name] &&
             User.authenticate(ChefServerWebui::Config[:admin_user_name], ChefServerWebui::Config[:admin_default_password]))
-        redirect_to(edit_user_url(@user.name), :flash => { :warning => "Please change the default password" })
+        redirect_to(edit_user_url(user), :flash => { :warning => "Please change the default password" })
       else
         redirect_back_or_default(:nodes)
       end
@@ -124,24 +137,23 @@ class UsersController < ApplicationController
     @user = User.load(params[:id])
     @user.destroy
 
-    if params[:id] == session[:user]
+    if params[:id] == current_user.name
       logout
     else
       redirect_to :users, :notice => "User #{params[:id]} deleted successfully."
     end
   rescue => e
-    session[:level] != :admin ? set_user_and_redirect : redirect_to_list_users({ :error => $! })
+    session[:current_user_level] != :admin ? set_user_and_redirect : redirect_to_list_users({ :error => $! })
   end
 
   private
 
   def set_user_and_redirect
-    begin
-      @user = User.load(session[:user]) rescue (raise NotFound, "Cannot find User #{session[:user]}, maybe it got deleted by an Administrator.")
-    rescue
+    unless @user = current_user
       logout_and_redirect_to_login
     else
-      redirect_to user_url(session[:user]), :alert => $!
+      #render :index
+      redirect_to user_url(current_user.name), :alert => $!
     end
   end
 

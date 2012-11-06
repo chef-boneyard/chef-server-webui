@@ -1,8 +1,8 @@
 .secondary-navigation
   %ul
-    - if is_admin?
+    - if current_user.admin?
       %li{ :class => "first #{active == 'index' ? "active" : ''}"}= link_to('List', users_path)
-    - if is_admin?
+    - if current_user.admin?
       %li{ :class => (active == 'create' ? "active" : '')}= link_to('Create', new_user_path)
     - if active != 'create' && active != 'index'
       %li{ :class => (active == 'show' ? "active" : '')}= link_to('Show', user_path(params[:user_id]))

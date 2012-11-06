@@ -20,7 +20,7 @@ require 'chef/api_client'
 
 class ClientsController < ApplicationController
   respond_to :html, :json
-  before_filter :login_required
+  before_filter :require_login
   before_filter :exclude => [:index, :show] do |controller|
     controller.require_admin(self)
   end

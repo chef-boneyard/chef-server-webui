@@ -21,7 +21,7 @@ require 'chef/data_bag'
 class DatabagsController < ApplicationController
 
   respond_to :html, :json
-  before_filter :login_required
+  before_filter :require_login
   before_filter :require_admin
 
   def new

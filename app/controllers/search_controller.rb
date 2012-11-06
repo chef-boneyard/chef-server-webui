@@ -21,7 +21,7 @@ require 'chef/search/query'
 class SearchController < ApplicationController
 
   respond_to :html
-  before_filter :login_required
+  before_filter :require_login
 
   def index
     @search_indexes = begin

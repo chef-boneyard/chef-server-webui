@@ -41,10 +41,10 @@ module ChefServerWebui
 
     # Returns an instance of ChefServer::RestClient with the 'actor' set to the
     # current logged in user. The current user is set in
-    # Thread.current[:current_user] by the Rails appliction using an
+    # Thread.current[:current_user_id] by the Rails appliction using an
     # around_filter
     def client_with_actor(url=ChefServerWebui::Config[:chef_server_url],
-                               actor=Thread.current[:current_user],
+                               actor=Thread.current[:current_user_id],
                                signing_key_filename=ChefServerWebui::Config[:rest_client_key])
       ChefServer::RestClient.new(url, actor, signing_key_filename, DEFAULT_REQUEST_HEADERS)
     end

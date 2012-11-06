@@ -84,6 +84,20 @@ class User
     end
   end
 
+  def last_admin?
+    return false unless admin?
+    count = 0
+    users = User.list
+    users.each do |u, url|
+      user = User.load(u)
+      if user.admin
+        count = count + 1
+        return false if count == 2
+      end
+    end
+    return true
+  end
+
   # Serialize this object as a hash
   def to_json(*a)
     attributes = Hash.new

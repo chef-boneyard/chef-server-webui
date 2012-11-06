@@ -22,7 +22,7 @@ require 'chef/node'
 class StatusController < ApplicationController
 
   respond_to :html
-  before_filter :login_required
+  before_filter :require_login
 
   def index
     begin
