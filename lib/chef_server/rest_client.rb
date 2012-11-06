@@ -16,39 +16,35 @@
 #
 
 require 'chef/config'
+require 'chef/log'
 require 'forwardable'
 
 module ChefServer
   class RestClient
     extend Forwardable
 
-    attr_reader :client
+    attr_reader :rest_client
 
-    def_delegator :@client, :get_rest
-    def_delegator :@client, :post_rest
-    def_delegator :@client, :put_rest
-    def_delegator :@client, :delete_rest
-    def_delegator :@client, :fetch
+    def_delegator :@rest_client, :get_rest
+    def_delegator :@rest_client, :post_rest
+    def_delegator :@rest_client, :put_rest
+    def_delegator :@rest_client, :delete_rest
+    def_delegator :@rest_client, :fetch
 
     def initialize(chef_server_url,
                    client_name,
                    signing_key_filename,
                    options={})
-      @client = Chef::REST.new(chef_server_url,
+      @rest_client = Chef::REST.new(chef_server_url,
                                client_name,
                                signing_key_filename,
                                options)
-      # Set values in the Chef::Config class so Chef::Search::Query receives
-      # the correct values
-      Chef::Config[:chef_server_url] = chef_server_url
-      Chef::Config[:node_name] = client_name
-      Chef::Config[:client_key] = signing_key_filename
     end
 
     [:get, :post, :put, :delete].each do |method|
       define_method method do |*args|
         begin
-          @client.send("#{method}_rest".to_sym, *args)
+          @rest_client.send("#{method}_rest".to_sym, *args)
         rescue => e
           Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
           raise e
@@ -59,21 +55,12 @@ module ChefServer
     [:fetch].each do |method|
       define_method method do |*args|
         begin
-          @client.send(method, *args)
+          @rest_client.send(method, *args)
         rescue => e
           Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
           raise e
         end
       end
     end
-
-    def search(*args, &block)
-      Chef::Search::Query.new.search(*args, &block)
-    end
-
-    def list_search_indexes
-      Chef::Search::Query.new.list_indexes
-    end
-
   end
 end

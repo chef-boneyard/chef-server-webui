@@ -25,7 +25,7 @@ class SearchController < ApplicationController
 
   def index
     @search_indexes = begin
-                        client.list_search_indexes
+                        client_with_actor.get("search")
                       rescue => e
                         log_and_flash_exception(e, "Could not list search indexes")
                         {}
@@ -35,7 +35,8 @@ class SearchController < ApplicationController
   def show
     begin
       query = (params[:q].nil? || params[:q].empty?) ? "*:*" : URI.escape(params[:q], Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
-      @results = client.search(params[:id], query)
+      response = client_with_actor.get("search/#{params[:id]}?q=#{query}&sort=&start=0&rows=20")
+      @results = [ response["rows"], response["start"], response["total"] ]
       @type = if params[:id].to_s == "node" || params[:id].to_s == "role" || params[:id].to_s == "client" || params[:id].to_s == "environment"
                 params[:id]
               else
