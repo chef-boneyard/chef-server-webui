@@ -12,9 +12,9 @@ module TreeHelper
   def append_tree(name, html, node, count, parent)
     to_do = node
     #to_do = node.kind_of?(Chef::Node) ? node.attribute : node
-    Chef::Log.debug("I have #{to_do.inspect}")
+    logger.debug("I have #{to_do.inspect}")
     to_do.sort{ |a,b| a[0] <=> b[0] }.each do |key, value|
-      Chef::Log.debug("I am #{key.inspect} #{value.inspect}")
+      logger.debug("I am #{key.inspect} #{value.inspect}")
       to_send = Array.new
       count += 1
       is_parent = false

@@ -56,14 +56,14 @@ class EnvironmentsController < ApplicationController
         redirect_to environments_url :notice => "Created Environment #{@environment.name}"
       rescue Net::HTTPServerException => e
         if conflict?(e)
-          Chef::Log.debug("Got 409 conflict creating environment #{params[:name]}\n#{format_exception(e)}")
+          logger.debug("Got 409 conflict creating environment #{params[:name]}\n#{format_exception(e)}")
           redirect_to new_environment_url, :alert => "An environment with that name already exists"
         elsif forbidden?(e)
           # Currently it's not possible to get 403 here. I leave the code here for completeness and may be useful in the future.[nuo]
-          Chef::Log.debug("Got 403 forbidden creating environment #{params[:name]}\n#{format_exception(e)}")
+          logger.debug("Got 403 forbidden creating environment #{params[:name]}\n#{format_exception(e)}")
           redirect_to new_environment_url, :alert => "Permission Denied. You do not have permission to create an environment."
         else
-          Chef::Log.error("Error communicating with the API server\n#{format_exception(e)}")
+          logger.error("Error communicating with the API server\n#{format_exception(e)}")
           raise
         end
       end
@@ -95,10 +95,10 @@ class EnvironmentsController < ApplicationController
       rescue Net::HTTPServerException => e
         if forbidden?(e)
           # Currently it's not possible to get 403 here. I leave the code here for completeness and may be useful in the future.[nuo]
-          Chef::Log.debug("Got 403 forbidden updating environment #{params[:name]}\n#{format_exception(e)}")
+          logger.debug("Got 403 forbidden updating environment #{params[:name]}\n#{format_exception(e)}")
           redirect_to edit_environment_url, :alert => "Permission Denied. You do not have permission to update an environment."
         else
-          Chef::Log.error("Error communicating with the API server\n#{format_exception(e)}")
+          logger.error("Error communicating with the API server\n#{format_exception(e)}")
           raise
         end
       end
@@ -201,7 +201,7 @@ class EnvironmentsController < ApplicationController
         index = index + 1
       end
     end
-    Chef::Log.debug("cookbook version constraints are: #{cookbook_version_constraints.inspect}")
+    logger.debug("cookbook version constraints are: #{cookbook_version_constraints.inspect}")
     cookbook_version_constraints
   end
 end

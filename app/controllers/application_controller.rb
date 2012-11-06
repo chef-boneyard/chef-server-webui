@@ -152,7 +152,7 @@ class ApplicationController < ActionController::Base
   #############################################################################
 
   def syntax_highlight(file_url)
-    Chef::Log.debug("fetching file from '#{file_url}' for highlighting")
+    logger.debug("fetching file from '#{file_url}' for highlighting")
     highlighted_file = nil
     client_with_actor.fetch(file_url) do |tempfile|
       tokens = CodeRay.scan_file(tempfile.path, :ruby)
@@ -162,7 +162,7 @@ class ApplicationController < ActionController::Base
   end
 
   def show_plain_file(file_url)
-    Chef::Log.debug("fetching file from '#{file_url}' for highlighting")
+    logger.debug("fetching file from '#{file_url}' for highlighting")
     client_with_actor.fetch(file_url) do |tempfile|
       if binary?(tempfile.path)
         return "Binary file not shown"
