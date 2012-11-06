@@ -30,7 +30,7 @@ class DatabagItemsController < ApplicationController
       @databag_item = Chef::DataBagItem.load(params[:databag_id], params[:id])
       @default_data = @databag_item.raw_data
     rescue => e
-      flash.now[:error] = "Could not load the databag item"
+      log_and_flash_exception(e, "Could not load the databag item")
     end
   end
 
@@ -43,11 +43,7 @@ class DatabagItemsController < ApplicationController
       client_with_actor.put("data/#{params[:databag_id]}/#{params[:id]}", @databag_item)
       redirect_to databag_url(params[:databag_id], @databag_item.name), :notice => "Updated Databag Item #{@databag_item.name}"
     rescue => e
-      if e.kind_of?(Chef::Exceptions::InvalidDataBagItemID)
-        flash.now[:error] = e.message
-      else
-        flash.now[:error] = "Could not update the databag item"
-      end
+      log_and_flash_exception(e, "Could not update the databag item")
       @databag_item = Chef::DataBagItem.load(params[:databag_id], params[:id])
       @default_data = @databag_item
       render :edit
@@ -67,12 +63,9 @@ class DatabagItemsController < ApplicationController
       client_with_actor.post("data/#{params[:databag_id]}", @databag_item)
       redirect_to(databag_url(@databag_name), :notice => "Databag item created successfully" )
     rescue => e
+      log_and_flash_exception(e, "Could not create databag item")
       if e.kind_of?(Chef::Exceptions::InvalidDataBagItemID)
         @default_data = {'id'=>''}
-        flash.now[:error] = e.message
-      else
-        Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-        flash.now[:error] = "Could not create databag item"
       end
       render :new
     end
@@ -82,13 +75,9 @@ class DatabagItemsController < ApplicationController
   end
 
   def show
-    begin
-      @databag_name = params[:databag_id]
-      @databag_item_name = params[:id]
-      @databag_item = client_with_actor.get("data/#{params[:databag_id]}/#{params[:id]}")
-    rescue => e
-      redirect_to databag_databag_items_url(@databag_name), :alert => "Could not show the databag item"
-    end
+    @databag_item = client_with_actor.get("data/#{params[:databag_id]}/#{params[:id]}")
+    @databag_name = params[:databag_id]
+    @databag_item_name = params[:id]
   end
 
   def destroy(databag_id=params[:databag_id], item_id=params[:id])
@@ -96,7 +85,8 @@ class DatabagItemsController < ApplicationController
       client_with_actor.delete("data/#{params[:databag_id]}/#{params[:id]}")
       redirect_to databag_url(databag_id), :notice => "Databag item deleted successfully"
     rescue => e
-      redirect_to databag_databag_items_url(databag_id), :alert => "Could not delete databag item"
+      log_and_flash_exception(e, "Could not delete databag item")
+      redirect_to databag_databag_items_url(databag_id)
     end
   end
 

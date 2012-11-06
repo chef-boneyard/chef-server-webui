@@ -130,9 +130,8 @@ class EnvironmentsController < ApplicationController
                      res
                    end
                  rescue => e
-                   Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                   flash[:error] = "Could not load cookbooks for environment #{params[:environment_id]}"
-                   {}
+                  log_and_flash_exception(e, "Could not load cookbooks for environment #{params[:environment_id]}")
+                  {}
                  end
   end
 
@@ -143,8 +142,7 @@ class EnvironmentsController < ApplicationController
     @nodes = begin
                client_with_actor.get("/environments/#{params[:environment_id]}/nodes").keys.sort
              rescue => e
-               Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-               flash[:error] = "Could not load nodes for environment #{params[:environment_id]}"
+               log_and_flash_exception(e, "Could not load nodes for environment #{params[:environment_id]}")
                []
              end
   end

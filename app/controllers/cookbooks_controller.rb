@@ -61,7 +61,7 @@ class CookbooksController < ApplicationController
       @manifest = @cookbook.manifest
       display @cookbook
     rescue => e
-      flash[:error] = $!
+      log_and_flash_exception(e)
       @cl = {}
       render :index
     end
@@ -75,7 +75,7 @@ class CookbooksController < ApplicationController
     num_versions = params[:num_versions] || "all"
     all_books = fetch_cookbook_versions(num_versions, :cookbook => cookbook_id,
                                         :use_envs => use_envs)
-    respond_with ({ cookbook_id => all_books[cookbook_id] })
+    respond_with({ cookbook_id => all_books[cookbook_id] })
   end
 
   ## ------
@@ -176,7 +176,7 @@ class CookbooksController < ApplicationController
         ans
       end
     rescue => e
-      flash[:error] = $!
+      log_and_flash_exception(e, $!)
       {}
     end
   end

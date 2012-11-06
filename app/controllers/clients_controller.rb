@@ -30,7 +30,8 @@ class ClientsController < ApplicationController
     begin
       @clients_list = client_with_actor.get("clients").keys.sort
     rescue => e
-      flash.now[:error] = "Could not list clients"
+      log_and_flash_exception(e,
+        "Could not list clients")
       @clients_list = []
     end
     respond_with @clients_list
@@ -38,12 +39,7 @@ class ClientsController < ApplicationController
 
   # GET /clients/:id
   def show
-    @client = begin
-                client_with_actor.get("clients/#{params[:id]}")
-              rescue => e
-                flash.now[:error] = "Could not load client #{params[:id]}"
-                Chef::ApiClient.new
-              end
+    @client = client_with_actor.get("clients/#{params[:id]}")
     respond_with @client
   end
 
@@ -52,8 +48,8 @@ class ClientsController < ApplicationController
     @client = begin
                 client_with_actor.get("clients/#{params[:id]}")
               rescue => e
-                Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                flash[:error] = "Could not load client #{params[:id]}"
+                log_and_flash_exception(e,
+                  "Could not load client #{params[:id]}")
                 Chef::ApiClient.new
               end
     respond_with @client
@@ -77,7 +73,7 @@ class ClientsController < ApplicationController
       @client = client_with_actor.get("clients/#{params[:name]}")
       render :show
     rescue => e
-      flash.now[:error] = "Could not create client"
+      log_and_flash_exception(e, "Could not create client")
       render :new
     end
   end
@@ -95,7 +91,7 @@ class ClientsController < ApplicationController
       flash.now[:notice] = @private_key.nil? ? "Updated Client" : "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
       render :show
     rescue => e
-      flash.now[:error] = "Could not update client"
+      log_and_flash_exception(e, "Could not update client")
       render :edit
     end
   end
@@ -106,7 +102,7 @@ class ClientsController < ApplicationController
       client_with_actor.delete("clients/#{params[:id]}")
       redirect_to clients_url, :notice => "Client #{params[:id]} deleted successfully"
     rescue => e
-      redirect_to :clients, :alert => "Could not delete client #{params[:id]}"
+      log_and_flash_exception(e, "Could not delete client #{params[:id]}")
     end
   end
 

@@ -46,6 +46,7 @@ class UsersController < ApplicationController
   def index
     @users = User.list
   rescue => e
+    log_and_flash_exception(e)
     set_user_and_redirect
   end
 
@@ -53,6 +54,7 @@ class UsersController < ApplicationController
   def edit
     @user = User.load(params[:id])
   rescue => e
+    log_and_flash_exception(e)
     set_user_and_redirect
   end
 
@@ -61,6 +63,7 @@ class UsersController < ApplicationController
 
     @user = User.load(params[:id])
   rescue => e
+    log_and_flash_exception(e)
     set_user_and_redirect
   end
 
@@ -80,13 +83,14 @@ class UsersController < ApplicationController
       render :edit
     end
   rescue => e
-    flash.now[:error] = "Could not update user #{@user.name}."
+    log_and_flash_exception(e, "Could not update user #{@user.name}.")
     render :edit
   end
 
   def new
     @user = User.new
   rescue => e
+    log_and_flash_exception(e)
     set_user_and_redirect
   end
 
@@ -99,15 +103,15 @@ class UsersController < ApplicationController
       render :new
     end
   rescue => e
-    flash.now[:error] = "Could not create user: #{$!}"
-    session[:current_user_level] != :admin ? set_user_and_redirect : (render :new)
+    log_and_flash_exception(e, "Could not create user")
+    !current_user.admin? ? set_user_and_redirect : (render :new)
   end
 
   def login
-    @user = User.new
     if current_user
       redirect_to :nodes, :flash => { :warning => "You've already logged in with user #{current_user.name}" }
     else
+      @user = User.new
       render :layout => 'login'
     end
   end
@@ -143,24 +147,18 @@ class UsersController < ApplicationController
       redirect_to :users, :notice => "User #{params[:id]} deleted successfully."
     end
   rescue => e
-    session[:current_user_level] != :admin ? set_user_and_redirect : redirect_to_list_users({ :error => $! })
+    log_and_flash_exception(e)
+    !current_user.admin? ? (set_user_and_redirect) : (redirect_to :users)
   end
 
   private
 
   def set_user_and_redirect
-    unless @user = current_user
-      logout_and_redirect_to_login
-    else
-      #render :index
+    if @user.name = current_user.name
       redirect_to user_url(current_user.name), :alert => $!
+    else
+      logout_and_redirect_to_login
     end
-  end
-
-  def redirect_to_list_users(message)
-    flash = message
-    @users = User.list
-    render :index
   end
 
 end

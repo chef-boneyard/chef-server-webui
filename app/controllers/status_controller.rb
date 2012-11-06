@@ -32,8 +32,8 @@ class StatusController < ApplicationController
         generate_status_hash("*:*")
       end
     rescue => e
-     @status = {}
-     flash.now[:error] = "Could not list status"
+      log_and_flash_exception(e, "Could not list status")
+      @status = {}
     end
   end
 

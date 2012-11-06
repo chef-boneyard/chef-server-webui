@@ -30,7 +30,7 @@ class RolesController < ApplicationController
     @role_list =  begin
                    client_with_actor.get("roles")
                   rescue => e
-                    flash[:error] = "Could not list roles"
+                    log_and_flash_exception(e, "Could not list roles")
                     {}
                   end
   end
@@ -40,7 +40,7 @@ class RolesController < ApplicationController
     @role = begin
               client_with_actor.get("roles/#{params[:id]}")
             rescue => e
-              flash[:error] = "Could not load role #{params[:id]}."
+              log_and_flash_exception(e, "Could not load role #{params[:id]}.")
               Chef::Role.new
             end
 
@@ -63,8 +63,8 @@ class RolesController < ApplicationController
       # merb select helper has no :include_blank => true, so fix the view in the controller.
       @existing_run_list_environments.unshift('')
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to roles_url, :alert => "Could not load available recipes, roles, or the run list."
+      log_and_flash_exception(e,
+        "Could not load available recipes, roles, or the run list.")
     end
   end
 
@@ -82,8 +82,9 @@ class RolesController < ApplicationController
       @existing_run_list_environments.unshift('')
       @available_recipes = list_available_recipes_for(@current_env)
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to roles_url, :alert => "Could not load role #{params[:id]}. #{e.message}"
+      log_and_flash_exception(e,
+        "Could not load role #{params[:id]}")
+      redirect_to roles_url
     end
   end
 
@@ -100,8 +101,8 @@ class RolesController < ApplicationController
       client_with_actor.post("roles", @role)
       redirect_to roles_url, :notice => "Created Role #{@role.name}"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to new_role_url, :alert => "Could not create role. #{e.message}"
+      log_and_flash_exception(e, "Could not create role. #{e.message}")
+      redirect_to new_role_url
     end
   end
 
@@ -116,7 +117,9 @@ class RolesController < ApplicationController
       client_with_actor.put("roles/#{params[:id]}", @role)
       redirect_to role_url(params[:id]), :notice => "Updated Role"
     rescue => e
-      redirect_to edit_role_url(params[:id]), :alert => "Could not update role #{params[:id]}. #{e.message}"
+      log_and_flash_exception(e,
+        "Could not update role #{params[:id]}. #{e.message}")
+      redirect_to edit_role_url(params[:id])
     end
   end
 
@@ -126,7 +129,8 @@ class RolesController < ApplicationController
       client_with_actor.delete("roles/#{params[:id]}")
       redirect_to roles_url, :notice => "Role #{params[:id]} deleted successfully."
     rescue => e
-      redirect_to roles_url, :alert => "Could not delete role #{params[:id]}"
+      log_and_flash_exception(e, "Could not delete role #{params[:id]}")
+      redirect_to roles_url
     end
   end
 

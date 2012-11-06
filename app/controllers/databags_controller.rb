@@ -36,11 +36,7 @@ class DatabagsController < ApplicationController
       client_with_actor.post("data", @databag)
       redirect_to databags_url, :notice => "Created Databag #{@databag.name}"
     rescue => e
-      if e.kind_of?(Chef::Exceptions::InvalidDataBagName)
-        flash.now[:error] = e.message
-      else
-        flash.now[:error] = "Could not create databag"
-      end
+      log_and_flash_exception(e, "Could not create databag")
       render :new
     end
   end
@@ -49,22 +45,14 @@ class DatabagsController < ApplicationController
     @databags = begin
                   client_with_actor.get("data")
                 rescue => e
-                  flash[:error] = "Could not list databags"
+                  log_and_flash_exception(e, "Could not list databags")
                   {}
                 end
   end
 
   def show
-    begin
-      @databag = client_with_actor.get("data/#{params[:id]}")
-      @databag_name = params[:id]
-    rescue => e
-      @databags = Chef::DataBag.list
-      flash.now[:error] = "Could not load databag"
-      render :index
-    end
-    raise HTTPStatus::NotFound, "Cannot find databag #{params[:id]}" unless @databag
-    render :show
+    @databag = client_with_actor.get("data/#{params[:id]}")
+    @databag_name = params[:id]
   end
 
   def destroy
@@ -72,10 +60,8 @@ class DatabagsController < ApplicationController
       client_with_actor.delete("data/#{params[:id]}")
       redirect_to databags_url, :notice => "Data bag #{params[:id]} deleted successfully"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      @databags = Chef::DataBag.list
-      flash.now[:error] = "Could not delete databag"
-      render :index
+      log_and_flash_exception(e, "Could not delete databag")
+      redirect_to :databags
     end
   end
 

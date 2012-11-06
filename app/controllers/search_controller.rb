@@ -27,8 +27,7 @@ class SearchController < ApplicationController
     @search_indexes = begin
                         client.list_search_indexes
                       rescue => e
-                        Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                        flash.now[:error] = "Could not list search indexes"
+                        log_and_flash_exception(e, "Could not list search indexes")
                         {}
                       end
   end
@@ -48,7 +47,8 @@ class SearchController < ApplicationController
       end
       @results
     rescue => e
-      redirect_to :searches, :alert => "Unable to find the #{params[:id]}. (#{$!})"
+      log_and_flash_exception(e, "Unable to find the #{params[:id]}")
+      redirect_to :searches
     end
   end
 

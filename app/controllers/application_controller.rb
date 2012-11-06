@@ -17,6 +17,29 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  # Handle all uncaught exceptions
+  rescue_from Exception do |e|
+    exception = if e.kind_of?(HTTPStatus::Base)
+                  e
+                # convert Net::HTTPServerException into HTTPStatus::*
+                elsif e.kind_of?(Net::HTTPServerException)
+                  case e.response.code
+                  when /400/; HTTPStatus::BadRequest.new(e.message)
+                  when /401/; HTTPStatus::Unauthorized.new(e.message)
+                  when /403/; HTTPStatus::Forbidden.new(e.message)
+                  when /404/; HTTPStatus::NotFound.new(e.message)
+                  else
+                    HTTPStatus::InternalServerError.new(error_message)
+                  end
+                # treat everything else as a 500
+                else
+                  log_and_flash_exception(e)
+                  if error_message = flash[:error]
+                    flash.delete(:error)
+                  end
+                  HTTPStatus::InternalServerError.new(error_message)
+                end
+    http_status_exception(exception)
   end
 
   # load environments if we are logged in
@@ -48,12 +71,36 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  #############################################################################
+  # Exception Handling
+  #############################################################################
+
+  def format_exception(exception)
+    require 'pp'
+    pretty_params = StringIO.new
+    PP.pp({:request_params => params}, pretty_params)
+    "#{exception.class.name}: #{exception.message}\n#{pretty_params.string}\n#{exception.backtrace.join("\n")}"
   end
 
+  def log_and_flash_exception(exception, flash_message=nil)
+    logger.error(format_exception(exception))
+    flash.now[:error] = if flash_message
+      "#{flash_message}: #{exception.message}"
+    else
+      "ERROR: #{exception.message}"
+    end
   end
+
+  #############################################################################
+  # Chef Object Helpers
+  #############################################################################
 
   def load_environments
     @environments = client_with_actor.get("environments").keys.sort
+  end
+
+  def list_available_recipes_for(environment)
+    client_with_actor.get("environments/#{environment}/recipes").sort!
   end
 
   # Load a cookbook and return a hash with a list of all the files of a
@@ -100,6 +147,10 @@ class ApplicationController < ActionController::Base
     files_list
   end
 
+  #############################################################################
+  # Assorted Helpers
+  #############################################################################
+
   def syntax_highlight(file_url)
     Chef::Log.debug("fetching file from '#{file_url}' for highlighting")
     highlighted_file = nil
@@ -135,32 +186,5 @@ class ApplicationController < ActionController::Base
     else
       [true, 1, '1', 't', 'T', 'true', 'TRUE'].include?(value)
     end
-  end
-
-  def list_available_recipes_for(environment)
-    client_with_actor.get("environments/#{environment}/recipes").sort!
-  end
-
-  def format_exception(exception)
-    require 'pp'
-    pretty_params = StringIO.new
-    PP.pp({:request_params => params}, pretty_params)
-    "#{exception.class.name}: #{exception.message}\n#{pretty_params.string}\n#{exception.backtrace.join("\n")}"
-  end
-
-  def conflict?(exception)
-    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /409/
-  end
-
-  def forbidden?(exception)
-    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /403/
-  end
-
-  def not_found?(exception)
-    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /404/
-  end
-
-  def bad_request?(exception)
-    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /400/
   end
 end
