@@ -62,5 +62,10 @@ module ChefServer
         end
       end
     end
+
+    def expand_run_list(environment, run_list_items)
+      run_list_items = run_list_items.to_s if run_list_items.kind_of?(Chef::RunList)
+      Chef::RunList.new(run_list_items).expand(environment, 'server', :rest => @rest_client)
+    end
   end
 end

@@ -37,17 +37,11 @@ class RolesController < ApplicationController
 
   # GET /roles/:id
   def show
-    @role = begin
-              client_with_actor.get("roles/#{params[:id]}")
-            rescue => e
-              log_and_flash_exception(e, "Could not load role #{params[:id]}.")
-              Chef::Role.new
-            end
-
+    @role = client_with_actor.get("roles/#{params[:id]}")
     @current_env = session[:environment] || "_default"
     @env_run_list_exists = @role.env_run_lists.has_key?(@current_env)
     @run_list = @role.run_list_for(@current_env)
-    @recipes = @run_list.expand(@current_env, 'server').recipes
+    @recipes = client_with_actor.expand_run_list(@current_env, @run_list).recipes
   end
 
   # GET /roles/new

@@ -29,25 +29,24 @@
                       %td= run_list_item.type
           .left.accordion
             %h3.head= link_to("Recipes", "#")
-            - recipes = @node.run_list.expand(@node.chef_environment, 'server').recipes
             %div
               %span.description.form.help
-                This is the list of recipes, fully expanded, as they will be applied to the node in question.  
+                This is the list of recipes, fully expanded, as they will be applied to the node in question.
               %table#recipes.table
                 %tr
                   %th.first Position
                   %th.last Name
-                - if recipes.empty?
+                - if @recipes.empty?
                   %tr
                     %td{:colspan => 2} This node has no recipes applied.
                 - else
-                  - recipes.each_with_index do |recipe, i|
+                  - @recipes.each_with_index do |recipe, i|
                     %tr
                       %td.position= i
                       %td= recipe
-            
+
           .left
-            %h3 Tags 
+            %h3 Tags
             %table#recipes.table
               %tr
                 %th.first Tags
@@ -57,7 +56,7 @@
                   %td{:colspan => 2} This node has no tags applied.
                 - else
                   %td{:colspan => 2}= @node[:tags].join(", ")
-            
+
           .left
             %h3 Attributes
             = build_tree('attrs', @node)

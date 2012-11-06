@@ -41,6 +41,7 @@ class NodesController < ApplicationController
 
   def show
     @node = client_with_actor.get("nodes/#{params[:id]}")
+    @recipes = client_with_actor.expand_run_list(@current_env, @node.run_list).recipes
   end
 
   def new
