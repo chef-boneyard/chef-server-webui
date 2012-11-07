@@ -60,5 +60,14 @@ module ChefServerWebui
 
     # Version of your assets, change this if you want to expire all your assets
     config.assets.version = '1.0'
+
+    # default application config values
+    config.chef_server_url = "http://127.0.0.1:8000"
+    config.rest_client_name = "chef-webui"
+    config.rest_client_key = "/etc/chef-server/webui_priv.pem"
+    config.admin_user_name =  "admin"
+    config.admin_default_password = "p@ssw0rd1"
+    config.rest_client_custom_http_headers = {}
+
   end
 end

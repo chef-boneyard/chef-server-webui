@@ -26,26 +26,25 @@ module ChefServerWebui
     #    so these requests are effectively authorized as said user.
     #
 
-    ChefServerWebui::Config[:rest_client_custom_http_headers] ||= {}
-
-    DEFAULT_REQUEST_HEADERS =
-      {:headers => ChefServerWebui::Config[:rest_client_custom_http_headers].merge({'x-ops-request-source' => 'web'})}.freeze
+    DEFAULT_REQUEST_HEADERS = {
+      :headers => ChefServerWebui::Application.config.rest_client_custom_http_headers.merge({'x-ops-request-source' => 'web'})
+    }.freeze
 
     # Returns an instance of ChefServer::RestClient with the 'actor' set to the
     # webui client.
     def client
-      client_with_actor(ChefServerWebui::Config[:chef_server_url],
-                        ChefServerWebui::Config[:rest_client_name],
-                        ChefServerWebui::Config[:rest_client_key])
+      client_with_actor(ChefServerWebui::Application.config.chef_server_url,
+                        ChefServerWebui::Application.config.rest_client_name,
+                        ChefServerWebui::Application.config.rest_client_key)
     end
 
     # Returns an instance of ChefServer::RestClient with the 'actor' set to the
     # current logged in user. The current user is set in
     # Thread.current[:current_user_id] by the Rails appliction using an
     # around_filter
-    def client_with_actor(url=ChefServerWebui::Config[:chef_server_url],
-                               actor=Thread.current[:current_user_id],
-                               signing_key_filename=ChefServerWebui::Config[:rest_client_key])
+    def client_with_actor(url=Rails.configuration.chef_server_url,
+                          actor=Thread.current[:current_user_id],
+                          signing_key_filename=ChefServerWebui::Application.config.rest_client_key)
       ChefServer::RestClient.new(url, actor, signing_key_filename, DEFAULT_REQUEST_HEADERS)
     end
   end

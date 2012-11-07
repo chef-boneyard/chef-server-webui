@@ -126,8 +126,9 @@ class UsersController < ApplicationController
       session[:current_user_id] = user.name
       session[:current_user_level] = (user.admin? ? :admin : :user)
       # Nag the admin to change the default password
-      if (user.name == ChefServerWebui::Config[:admin_user_name] &&
-            User.authenticate(ChefServerWebui::Config[:admin_user_name], ChefServerWebui::Config[:admin_default_password]))
+      if (user.name == ChefServerWebui::Application.config.admin_user_name &&
+            User.authenticate(ChefServerWebui::Application.config.admin_user_name,
+                              ChefServerWebui::Application.config.admin_default_password))
         redirect_to(edit_user_url(user), :flash => { :warning => "Please change the default password" })
       else
         redirect_back_or_default(:nodes)
