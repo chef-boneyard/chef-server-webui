@@ -60,7 +60,6 @@ class UsersController < ApplicationController
 
   # Show the details of a user. If the user is not admin, only able to show itself; otherwise able to show everyone
   def show
-
     @user = User.load(params[:id])
   rescue => e
     log_and_flash_exception(e)
@@ -78,7 +77,12 @@ class UsersController < ApplicationController
 
     if @user.valid?(:update)
       @user.save
-      redirect_to :user, :notice => "Updated user #{@user.name}."
+      notice = "Updated user #{@user.name}."
+      if @user.regenerate_private_key?
+        notice << " Please copy the following private key as the users's private key."
+      end
+      flash.now[:notice] = notice
+      render :show
     else
       render :edit
     end
@@ -98,7 +102,8 @@ class UsersController < ApplicationController
     @user = User.new(params[:user])
     if @user.valid?(:create)
       @user.create
-      redirect_to :users, :notice => "Created user #{@user.name}."
+      flash.now[:notice] = "Created user #{@user.name}. Please copy the following private key as the users's private key."
+      render :show
     else
       render :new
     end

@@ -18,6 +18,11 @@
         %p= f.password_field :password_confirmation, :id => "user_confirm_new_password", :class =>"password_field"
         %span.description Confirm new password for the User. Keep blank if you do not want to change password.
 
+      %div.group.form
+        %p= label_tag :regenerate_private_key, "Regenerate Private Key", :class => "label"
+        %p= f.check_box :regenerate_private_key
+        %span.description Existing one will no longer work!
+
       - if can_edit_admin?(@user.name)
         %div.group
           %p= f.label :admin, :class => "label"

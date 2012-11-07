@@ -36,7 +36,9 @@ class User
   end
 
   attr_accessor :name, :validated, :admin, :password, :password_confirmation
-  attr_accessor :public_key
+  attr_accessor :public_key, :private_key
+  attr_accessor :regenerate_private_key
+  alias_method :regenerate_private_key?, :regenerate_private_key
 
   # TODO: delete when Erchef users enpoint is updated
   attr_accessor :openid
@@ -55,7 +57,8 @@ class User
   #############################################################################
   validates :name, :presence => true,
                    :uniqueness => {:on => :create}
-  validates :password, :length => { :minimum => 6 },
+  validates :password, :length => { :minimum => 6,
+                                    :unless => Proc.new { |u| u.password.blank? } },
                        :confirmation => true,
                        :presence => { :on => :create }
 
@@ -108,6 +111,9 @@ class User
     }
     # ensures we don't send empty password values to Erchef
     result['password'] = password unless password.blank?
+    # a PUT with private_key = true tells Erchef to regen the keypair
+    # https://github.com/opscode/chef_wm/blob/master/src/chef_wm_named_user.erl#L123-136
+    result['private_key'] = true if regenerate_private_key?
     result.to_json(*a)
   end
 
@@ -119,7 +125,9 @@ class User
   # Save this User via the REST API
   def save
     begin
-      client_with_actor.put("users/#{@name}", self)
+      response = client_with_actor.put("users/#{@name}", self)
+      self.private_key = response['private_key']
+      self.public_key = response['public_key']
     rescue Net::HTTPServerException => e
       if e.response.code == "404"
         client_with_actor.post("users", self)
@@ -132,7 +140,10 @@ class User
 
   # Create the User via the REST API
   def create
-    client_with_actor.post("users", self)
+    response = client_with_actor.post("users", self)
+    self.private_key = response['private_key']
+    self.public_key = response['public_key']
+    self.persisted = true
     self
   end
 
