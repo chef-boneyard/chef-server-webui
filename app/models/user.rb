@@ -16,12 +16,14 @@
 #
 
 require 'chef/json_compat'
+require 'chef_server_webui/helpers'
 
 class User
   include ActiveModel::Naming
   include ActiveModel::Conversion
   include ActiveModel::Validations
   include ActiveModel::MassAssignmentSecurity
+  include ChefServerWebui::Helpers
   include ChefServerWebui::ApiClientHelper
   extend ChefServerWebui::ApiClientHelper
 
@@ -38,7 +40,6 @@ class User
   attr_accessor :name, :validated, :admin, :password, :password_confirmation
   attr_accessor :public_key, :private_key
   attr_accessor :regenerate_private_key
-  alias_method :regenerate_private_key?, :regenerate_private_key
 
   # TODO: delete when Erchef users enpoint is updated
   attr_accessor :openid
@@ -80,11 +81,11 @@ class User
   end
 
   def admin?
-    if admin.is_a?(String) && admin.blank?
-      nil
-    else
-      [true, 1, '1', 't', 'T', 'true', 'TRUE'].include?(admin)
-    end
+    coerce_boolean(admin)
+  end
+
+  def regenerate_private_key?
+    coerce_boolean(regenerate_private_key)
   end
 
   def last_admin?
@@ -126,8 +127,8 @@ class User
   def save
     begin
       response = client_with_actor.put("users/#{@name}", self)
-      self.private_key = response['private_key']
-      self.public_key = response['public_key']
+      self.private_key = response['private_key'] if response.key?('private_key')
+      self.public_key = response['public_key'] if response.key?('public_key')
     rescue Net::HTTPServerException => e
       if e.response.code == "404"
         client_with_actor.post("users", self)
@@ -171,6 +172,8 @@ class User
     # return nil if name.blank?
     begin
       result = client.get("users/#{name}")
+      require 'pp'
+      pp result
       # persisted? is used by Rails to determine create vs update
       result.merge!('persisted' => true) if result
       user = User.new(result)

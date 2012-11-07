@@ -1,7 +1,8 @@
+
 class ApplicationController < ActionController::Base
   include SessionHelper
   include ChefServerWebui::ApiClientHelper
-  include Chef::Mixin::Checksum
+  include ChefServerWebui::Helpers
 
   # Make the logged-in user globally available in the current thread using the
   # Thread.current hash.  We use an around filter to ensure the thread local
@@ -171,20 +172,6 @@ class ApplicationController < ActionController::Base
       else
         return IO.read(tempfile.path)
       end
-    end
-  end
-
-  def binary?(file)
-    s = (File.read(file, File.stat(file).blksize) || "")
-    s.empty? || ( s.count( "^ -~", "^\r\n" ).fdiv(s.size) > 0.3 || s.index( "\x00" ))
-  end
-
-  # taken from ActiveRecord::ConnectionAdapters::Column
-  def value_to_boolean(value)
-    if value.is_a?(String) && value.blank?
-      nil
-    else
-      [true, 1, '1', 't', 'T', 'true', 'TRUE'].include?(value)
     end
   end
 end
