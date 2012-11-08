@@ -7,7 +7,17 @@
         .inner
           .left
             %h3 Admin
-            = @user.admin
+            = @user.admin?
           .left
-            %h3 OpenID
-            = @user.openid || "No OpenID associated to this user account."
+            %h3 Public Key
+            %p
+              = text_area_tag 'public_key', @user.public_key, :rows => 10, :cols => 65
+              = clippy(h(@user.public_key))
+          -unless @user.private_key.nil?
+            .left
+              %h3 Private Key (Will not show again, Please copy!)
+              %h4.bold= "Please copy and save as the users's private key (e.g. #{@user.name}.pem)"
+              %p
+                = text_area_tag 'private_key', @user.private_key, :rows => 27, :cols => 65
+                = clippy @user.private_key
+

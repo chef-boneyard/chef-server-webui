@@ -1,0 +1,7 @@
+.block#block-messages
+  .content
+    %h2.title= "#{@exception.status_code} Internal Server Error :("
+    .inner
+      .flash
+        %div.message.error
+          %p= h(@exception.message)

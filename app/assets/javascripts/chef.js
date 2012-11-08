@@ -107,7 +107,6 @@ $(document).ready(function(){
       form.append($('input#user_new_password')).css('display', 'none');
       form.append($('input#user_admin')).css('display', 'none');
       form.append($('input#user_confirm_new_password')).css('display', 'none');
-      form.append($('input#openid')).css('display', 'none');
     }
     if (form.attr('id') === 'login') {
       form.append($('input#user_name')).css('display', 'none');

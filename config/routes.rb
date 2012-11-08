@@ -35,13 +35,7 @@ ChefServerWebui::Application.routes.draw do
 
   match "/status", :to => "status#index", :as => :status, :only => :get
 
-  resources :searches, :path => "search", :controller => "search"
-  match "/search/:search_id/entries", :only => 'get', :to => "search_entries", :action => "index"
-  match "/search/:search_id/entries", :only => 'post', :to => "search_entries", :action => "create"
-  match "/search/:search_id/entries/:id", :only => 'get', :to => "search_entries", :action => "show"
-  match "/search/:search_id/entries/:id", :only => 'put', :to => "search_entries", :action => "create"
-  match "/search/:search_id/entries/:id", :only => 'post', :to => "search_entries", :action => "update"
-  match "/search/:search_id/entries/:id", :only => 'delete', :to => "search_entries", :action => "destroy"
+  resources :searches, :path => "search", :controller => "search", :only => [:index, :show]
 
   match "/cookbooks/_attribute_files", :to => "cookbooks#attribute_files"
   match "/cookbooks/_recipe_files", :to => "cookbooks#recipe_files"
@@ -55,34 +49,20 @@ ChefServerWebui::Application.routes.draw do
 
   resources :clients
 
-  match "/databags/:databag_id/databag_items", :only => :get, :to => "databags#show", :id=>":databag_id"
-
   resources :databags do
-    resources :databag_items
+    resources :databag_items, :except => [:index, :show]
   end
 
-  match '/openid/consumer', :to => 'openid_consumer#index', :as => :openid_consumer
-  match '/openid/consumer/start', :to => 'openid_consumer#start', :as => :openid_consumer_start
-  match '/openid/consumer/login', :to => 'openid_consumer#login', :as => :openid_consumer_login
-  match '/openid/consumer/complete', :to => 'openid_consumer#complete', :as => :openid_consumer_complete
-  match '/openid/consumer/logout', :to => 'openid_consumer#logout', :as => :openid_consumer_logout
-
-  match '/login', :to => 'users#login', :as => :users_login
-  match '/logout', :to => 'users#logout', :as => :users_logout
-
-  match '/users', :to => 'users#index', :as => :users
-  match '/users/create', :to => 'users#create', :as => :users_create
-  match '/users/start', :to => 'users#start', :as => :users_start
-
-  match '/users/login', :to => 'users#login', :as => :users_login
-  match '/users/login_exec', :to => 'users#login_exec', :as => :users_login_exec
-  match '/users/complete', :to => 'users#complete', :as => :users_complete
-  match '/users/logout', :to => 'users#logout', :as => :users_logout
-  match '/users/new', :to => 'users#new', :as => :users_new
-  match '/users/:user_id/edit', :to => 'users#edit', :as => :users_edit
-  match '/users/:user_id', :to => 'users#show', :as => :users_show
-  match '/users/:user_id/delete', :only => :delete, :to => 'users#destroy', :as => :users_delete
-  match '/users/:user_id/update', :only => :put, :to => 'users#update', :as => :users_update
+  resources :users do
+    member do
+      get 'logout'
+      get 'complete'
+    end
+    collection do
+      get 'login'
+      post 'login_exec'
+    end
+  end
 
   match '/', :to => 'nodes#index', :as => :top
 end

@@ -15,8 +15,20 @@
 # limitations under the License.
 #
 
-require "chef_server_webui/api_client_helper"
-require 'chef_server_webui/config'
-require 'chef_server_webui/version'
+module ChefServerWebui
+  module Helpers
 
-CHEF_SERVER_WEBUI_VERSION = ::ChefServerWebui::VERSION
+    def binary?(file)
+      s = (File.read(file, File.stat(file).blksize) || "")
+      s.empty? || ( s.count( "^ -~", "^\r\n" ).fdiv(s.size) > 0.3 || s.index( "\x00" ))
+    end
+
+    def coerce_boolean(value)
+      if value.is_a?(String) && value.blank?
+        nil
+      else
+        [true, 1, '1', 't', 'T', 'true', 'TRUE'].include?(value)
+      end
+    end
+  end
+end

@@ -1,87 +1,107 @@
+
 class ApplicationController < ActionController::Base
+  include SessionHelper
+  include ChefServerWebui::ApiClientHelper
+  include ChefServerWebui::Helpers
 
-  include Chef::Mixin::Checksum
-
-  before_filter :load_environments
-
-  # Check if the user is logged in and if the user still exists
-  def login_required
-   if session[:user]
-     begin
-       load_session_user
-     rescue
-       logout_and_redirect_to_login
-     else
-       return session[:user]
-     end
-   else
-     self.store_location
-     redirect_to users_login_url, :alert => "You don't have access to that, please login."
-   end
-  end
-
-  def load_session_user
-    Chef::WebUIUser.load(session[:user])
-  rescue
-    raise NotFound, "Cannot find User #{session[:user]}, maybe it got deleted by an Administrator."
-  end
-
-  def cleanup_session
-    [:user,:level, :environment].each { |n| session.delete(n) }
-  end
-
-  def logout_and_redirect_to_login
-    cleanup_session
-    @user = Chef::WebUIUser.new
-    redirect_to users_login_url, :error => $!
-  end
-
-  def require_admin
-    raise AdminAccessRequired unless is_admin?
-  end
-
-  def is_admin?
-    user = Chef::WebUIUser.load(session[:user])
-    user.admin?
-  end
-
-  #return true if there is only one admin left, false otherwise
-  def is_last_admin?
-    count = 0
-    users = Chef::WebUIUser.list
-    users.each do |u, url|
-      user = Chef::WebUIUser.load(u)
-      if user.admin
-        count = count + 1
-        return false if count == 2
-      end
+  # Make the logged-in user globally available in the current thread using the
+  # Thread.current hash.  We use an around filter to ensure the thread local
+  # variable is cleaned up before being used if this thread is recycled.
+  around_filter do |controller, action|
+    if current_user = controller.current_user
+       Thread.current[:current_user_id] = controller.current_user.name
     end
-    true
+    begin
+      action.call
+    ensure
+      Thread.current[:current_user_id] = nil
+    end
   end
 
-  #whether or not the user should be able to edit a user's admin status
-  def can_edit_admin?
-    return false unless is_admin? && !is_last_admin?
-    true
+  # Handle all uncaught exceptions
+  rescue_from Exception do |e|
+    exception = if e.kind_of?(HTTPStatus::Base)
+                  e
+                # convert Net::HTTPServerException into HTTPStatus::*
+                elsif e.kind_of?(Net::HTTPServerException)
+                  case e.response.code
+                  when /400/; HTTPStatus::BadRequest.new(e.message)
+                  when /401/; HTTPStatus::Unauthorized.new(e.message)
+                  when /403/; HTTPStatus::Forbidden.new(e.message)
+                  when /404/; HTTPStatus::NotFound.new(e.message)
+                  else
+                    HTTPStatus::InternalServerError.new(error_message)
+                  end
+                # treat everything else as a 500
+                else
+                  log_and_flash_exception(e)
+                  if error_message = flash[:error]
+                    flash.delete(:error)
+                  end
+                  HTTPStatus::InternalServerError.new(error_message)
+                end
+    http_status_exception(exception)
   end
 
-  # Store the URI of the current request in the session.
-  #
-  # We can return to this location by calling #redirect_back_or_default.
-  def store_location
-    session[:return_to] = request.url
+  # load environments if we are logged in
+  before_filter {|controller| load_environments if logged_in?}
+
+  #############################################################################
+  # Filters
+  #############################################################################
+
+  def require_login
+    unless logged_in?
+      self.store_location
+      redirect_to login_users_url, :notice => "You don't have access to that, please login."
+    end
   end
 
-  # Redirect to the URI stored by the most recent store_location call or
-  # to the passed default.
-  def redirect_back_or_default(default)
-    loc = session[:return_to] || default
-    session[:return_to] = nil
-    redirect_to loc
+  def require_admin(calling_controller=nil)
+    unless current_user.admin?
+      msg = "You are not authorized to perform this action!"
+      if calling_controller
+        resource_name = calling_controller.class.to_s.underscore.split('_').first
+        action_name = case calling_controller.action_name
+                      when "new"; "create"
+                      when "index"; "list"
+                      else calling_controller.action_name; end
+        msg = "You are not authorized to #{action_name} #{resource_name}!"
+      end
+      raise HTTPStatus::Unauthorized, msg
+    end
   end
+
+  #############################################################################
+  # Exception Handling
+  #############################################################################
+
+  def format_exception(exception)
+    require 'pp'
+    pretty_params = StringIO.new
+    PP.pp({:request_params => params}, pretty_params)
+    "#{exception.class.name}: #{exception.message}\n#{pretty_params.string}\n#{exception.backtrace.join("\n")}"
+  end
+
+  def log_and_flash_exception(exception, flash_message=nil)
+    logger.error(format_exception(exception))
+    flash.now[:error] = if flash_message
+      "#{flash_message}: #{exception.message}"
+    else
+      "ERROR: #{exception.message}"
+    end
+  end
+
+  #############################################################################
+  # Chef Object Helpers
+  #############################################################################
 
   def load_environments
-    @environments = Chef::Environment.list.keys.sort
+    @environments = client_with_actor.get("environments").keys.sort
+  end
+
+  def list_available_recipes_for(environment)
+    client_with_actor.get("environments/#{environment}/recipes").sort!
   end
 
   # Load a cookbook and return a hash with a list of all the files of a
@@ -95,10 +115,9 @@ class ApplicationController < ActionController::Base
   # <Hash>:: A hash consisting of the short name of the file in :name, and the full path
   #   to the file in :file.
   def load_cookbook_segment(cookbook_id, segment)
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    cookbook = r.get_rest("cookbooks/#{cookbook_id}")
+    cookbook = client_with_actor.get("cookbooks/#{cookbook_id}")
 
-    raise NotFound unless cookbook
+    raise HTTPStatus::NotFound unless cookbook
 
     files_list = segment_files(segment, cookbook)
 
@@ -124,16 +143,19 @@ class ApplicationController < ActionController::Base
     when :libraries
       files_list = cookbook["libraries"]
     else
-      raise ArgumentError, "segment must be one of :attributes, :recipes, :definitions or :libraries"
+      raise HTTPStatus::Forbidden, "segment must be one of :attributes, :recipes, :definitions or :libraries"
     end
     files_list
   end
 
+  #############################################################################
+  # Assorted Helpers
+  #############################################################################
+
   def syntax_highlight(file_url)
-    Chef::Log.debug("fetching file from '#{file_url}' for highlighting")
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
+    logger.debug("fetching file from '#{file_url}' for highlighting")
     highlighted_file = nil
-    r.fetch(file_url) do |tempfile|
+    client_with_actor.fetch(file_url) do |tempfile|
       tokens = CodeRay.scan_file(tempfile.path, :ruby)
       highlighted_file = CodeRay.encode_tokens(tokens, :span)
     end
@@ -141,9 +163,8 @@ class ApplicationController < ActionController::Base
   end
 
   def show_plain_file(file_url)
-    Chef::Log.debug("fetching file from '#{file_url}' for highlighting")
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    r.fetch(file_url) do |tempfile|
+    logger.debug("fetching file from '#{file_url}' for highlighting")
+    client_with_actor.fetch(file_url) do |tempfile|
       if binary?(tempfile.path)
         return "Binary file not shown"
       elsif ((File.size(tempfile.path) / (1048576)) > 5)
@@ -152,51 +173,5 @@ class ApplicationController < ActionController::Base
         return IO.read(tempfile.path)
       end
     end
-  end
-
-  def binary?(file)
-    s = (File.read(file, File.stat(file).blksize) || "")
-    s.empty? || ( s.count( "^ -~", "^\r\n" ).fdiv(s.size) > 0.3 || s.index( "\x00" ))
-  end
-
-  def str_to_bool(str)
-    str =~ /true/ ? true : false
-  end
-
-  #for showing search result
-  def determine_name(type, object)
-    case type
-    when :node, :role, :client, :environment
-      object.name
-    else
-      params[:id]
-    end
-  end
-
-  def list_available_recipes_for(environment)
-    Chef::Environment.load_filtered_recipe_list(environment).sort!
-  end
-
-  def format_exception(exception)
-    require 'pp'
-    pretty_params = StringIO.new
-    PP.pp({:request_params => params}, pretty_params)
-    "#{exception.class.name}: #{exception.message}\n#{pretty_params.string}\n#{exception.backtrace.join("\n")}"
-  end
-
-  def conflict?(exception)
-    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /409/
-  end
-
-  def forbidden?(exception)
-    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /403/
-  end
-
-  def not_found?(exception)
-    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /404/
-  end
-
-  def bad_request?(exception)
-    exception.kind_of?(Net::HTTPServerException) && exception.message =~ /400/
   end
 end

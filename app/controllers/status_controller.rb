@@ -22,21 +22,29 @@ require 'chef/node'
 class StatusController < ApplicationController
 
   respond_to :html
-  before_filter :login_required
+  before_filter :require_login
 
   def index
     begin
-      @status = Chef::Node.list(true)
-      if session[:environment]
-        @status = Chef::Node.list_by_environment(session[:environment],true)
+      @status = if session[:environment]
+        generate_status_hash("chef_environment:#{session[:environment]}")
       else
-        @status = Chef::Node.list(true)
+        generate_status_hash("*:*")
       end
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
+      log_and_flash_exception(e, "Could not list status")
       @status = {}
-      flash[:error] = "Could not list status"
     end
+  end
+
+  private
+
+  def generate_status_hash(query)
+    result = Hash.new
+    client_with_actor.get("search/node?q=*:*&sort=&start=0&rows=20")["rows"].each do |n|
+      result[n.name] = n unless n.nil?
+    end
+    result
   end
 
 end

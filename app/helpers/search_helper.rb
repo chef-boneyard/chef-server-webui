@@ -15,8 +15,16 @@
 # limitations under the License.
 #
 
-require "chef_server_webui/api_client_helper"
-require 'chef_server_webui/config'
-require 'chef_server_webui/version'
+module SearchHelper
 
-CHEF_SERVER_WEBUI_VERSION = ::ChefServerWebui::VERSION
+  # for showing search result
+  def determine_name(type, object)
+    case type
+    when :node, :role, :client, :environment
+      object.name
+    else
+      params[:id]
+    end
+  end
+
+end

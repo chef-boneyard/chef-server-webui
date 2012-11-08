@@ -21,15 +21,14 @@ require 'chef/environment'
 class EnvironmentsController < ApplicationController
 
   respond_to :html, :json
-  before_filter :login_required
+  before_filter :require_login
   before_filter :require_admin, :only => [:create, :update, :destroy]
 
   # GET /environments
   def index
     @environment_list = begin
-                          Chef::Environment.list
+                          client_with_actor.get("environments")
                         rescue => e
-                          Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
                           flash[:error] = "Could not list environments"
                           {}
                         end
@@ -49,21 +48,22 @@ class EnvironmentsController < ApplicationController
 
   # POST /environments
   def create
+    raise HTTPStatus::BadRequest, "Environment name cannot be blank" if params[:name].blank?
     @environment = Chef::Environment.new
     if @environment.update_from_params(processed_params=process_params)
       begin
-        @environment.create
+        client_with_actor.post("environments", @environment)
         redirect_to environments_url :notice => "Created Environment #{@environment.name}"
       rescue Net::HTTPServerException => e
         if conflict?(e)
-          Chef::Log.debug("Got 409 conflict creating environment #{params[:name]}\n#{format_exception(e)}")
-          redirect_to new_environment_url, :error => "An environment with that name already exists"
+          logger.debug("Got 409 conflict creating environment #{params[:name]}\n#{format_exception(e)}")
+          redirect_to new_environment_url, :alert => "An environment with that name already exists"
         elsif forbidden?(e)
           # Currently it's not possible to get 403 here. I leave the code here for completeness and may be useful in the future.[nuo]
-          Chef::Log.debug("Got 403 forbidden creating environment #{params[:name]}\n#{format_exception(e)}")
-          redirect_to new_environment_url, :error => "Permission Denied. You do not have permission to create an environment."
+          logger.debug("Got 403 forbidden creating environment #{params[:name]}\n#{format_exception(e)}")
+          redirect_to new_environment_url, :alert => "Permission Denied. You do not have permission to create an environment."
         else
-          Chef::Log.error("Error communicating with the API server\n#{format_exception(e)}")
+          logger.error("Error communicating with the API server\n#{format_exception(e)}")
           raise
         end
       end
@@ -90,15 +90,15 @@ class EnvironmentsController < ApplicationController
     load_environment
     if @environment.update_from_params(process_params(params[:id]))
       begin
-        @environment.save
+        client_with_actor.put("environments/#{params[:id]}", @environment)
         redirect_to environment_url(@environment.name), :notice => "Updated Environment #{@environment.name}"
       rescue Net::HTTPServerException => e
         if forbidden?(e)
           # Currently it's not possible to get 403 here. I leave the code here for completeness and may be useful in the future.[nuo]
-          Chef::Log.debug("Got 403 forbidden updating environment #{params[:name]}\n#{format_exception(e)}")
-          redirect_to edit_environment_url, :error => "Permission Denied. You do not have permission to update an environment."
+          logger.debug("Got 403 forbidden updating environment #{params[:name]}\n#{format_exception(e)}")
+          redirect_to edit_environment_url, :alert => "Permission Denied. You do not have permission to update an environment."
         else
-          Chef::Log.error("Error communicating with the API server\n#{format_exception(e)}")
+          logger.error("Error communicating with the API server\n#{format_exception(e)}")
           raise
         end
       end
@@ -112,45 +112,37 @@ class EnvironmentsController < ApplicationController
   # DELETE /environments/:id
   def destroy
     begin
-      @environment = Chef::Environment.load(params[:id])
-      @environment.destroy
-      redirect_to environments_url, :notice => "Environment #{@environment.name} deleted successfully."
+      client_with_actor.delete("environments/#{params[:id]}")
+      redirect_to :environments, :notice => "Environment #{params[:id]} deleted successfully."
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      @environment_list = Chef::Environment.list()
-      flash[:error] = "Could not delete environment #{params[:id]}: #{e.message}"
-      render :index
+      redirect_to :environments, :alert => "Could not delete environment #{params[:id]}: #{e.message}"
     end
   end
 
   # GET /environments/:environment_id/cookbooks
   def list_cookbooks
     # TODO: rescue loading the environment
-    @environment = Chef::Environment.load(params[:environment_id])
+    load_environment
     @cookbooks = begin
-                   r = Chef::REST.new(Chef::Config[:chef_server_url])
-                   r.get_rest("/environments/#{params[:environment_id]}/cookbooks").inject({}) do |res, (cookbook, url)|
+                   client_with_actor.get("/environments/#{params[:environment_id]}/cookbooks").inject({}) do |res, (cookbook, url)|
                      # we just want the cookbook name and the version
                      res[cookbook] = url.split('/').last
                      res
                    end
                  rescue => e
-                   Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                   flash[:error] = "Could not load cookbooks for environment #{params[:environment_id]}"
-                   {}
+                  log_and_flash_exception(e, "Could not load cookbooks for environment #{params[:environment_id]}")
+                  {}
                  end
   end
 
   # GET /environments/:environment_id/nodes
   def list_nodes
     # TODO: rescue loading the environment
-    @environment = Chef::Environment.load(params[:environment_id])
+    load_environment
     @nodes = begin
-               r = Chef::REST.new(Chef::Config[:chef_server_url])
-               r.get_rest("/environments/#{params[:environment_id]}/nodes").keys.sort
+               client_with_actor.get("/environments/#{params[:environment_id]}/nodes").keys.sort
              rescue => e
-               Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-               flash[:error] = "Could not load nodes for environment #{params[:environment_id]}"
+               log_and_flash_exception(e, "Could not load nodes for environment #{params[:environment_id]}")
                []
              end
   end
@@ -176,11 +168,11 @@ class EnvironmentsController < ApplicationController
   private
 
   def load_environment
+    id = params[:id] || params[:environment_id]
     @environment = begin
-      Chef::Environment.load(params[:id])
+      client_with_actor.get("environments/#{id}")
     rescue Net::HTTPServerException => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not load environment #{params[:id]}"
+      flash[:error] = "Could not load environment #{id}"
       @environment = Chef::Environment.new
       false
     end
@@ -189,10 +181,9 @@ class EnvironmentsController < ApplicationController
   def load_cookbooks
     begin
       # @cookbooks is a hash, keys are cookbook names, values are their URIs.
-      @cookbooks = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("cookbooks").keys.sort
+      @cookbooks = client_with_actor.get("cookbooks").keys.sort
     rescue Net::HTTPServerException => e
-      Chef::Log.error(format_exception(e))
-      redirect_to new_environment_url, :error => "Could not load the list of available cookbooks."
+      redirect_to new_environment_url, :alert => "Could not load the list of available cookbooks."
     end
   end
 
@@ -210,7 +201,7 @@ class EnvironmentsController < ApplicationController
         index = index + 1
       end
     end
-    Chef::Log.debug("cookbook version constraints are: #{cookbook_version_constraints.inspect}")
+    logger.debug("cookbook version constraints are: #{cookbook_version_constraints.inspect}")
     cookbook_version_constraints
   end
 end

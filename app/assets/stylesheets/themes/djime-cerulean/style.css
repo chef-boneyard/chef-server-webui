@@ -134,7 +134,7 @@ hr {
 
 /* @end */
 
-#main-navigation ul li a:visited, #main-navigation ul li a:hover,
+#main-navigation ul li a:link, #main-navigation ul li a:visited, #main-navigation ul li a:hover,
 .secondary-navigation ul li a:link, .secondary-navigation ul li a:visited, .secondary-navigation ul li a:hover, .secondary-navigation ul li a:active,
 #user-navigation ul li a:link, #user-navigation ul li a:visited, #user-navigation ul li a:hover, #user-navigation ul li a:active {
   text-decoration: none;
@@ -202,10 +202,14 @@ hr {
   font-size: .9em;
 }
 
-.form .inline_error_message {
+.form .inline_error_message, .form .field_with_errors {
   color: #FF0000;
   font-weight: bold;
   padding-left:5px;
+}
+
+.field_with_errors input {
+  border: 1px solid #fbb;
 }
 
 /* @group Flash messages */
@@ -220,7 +224,7 @@ hr {
 .flash .message p {
   margin:8px;
 }
-.flash .error {
+.flash .error, .flash .alert {
   border: 1px solid #fbb;
   background-color: #fdd;
 }

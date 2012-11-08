@@ -20,16 +20,18 @@ require 'chef/api_client'
 
 class ClientsController < ApplicationController
   respond_to :html, :json
-  before_filter :login_required
-  before_filter :require_admin, :exclude => [:index, :show]
+  before_filter :require_login
+  before_filter :exclude => [:index, :show] do |controller|
+    controller.require_admin(self)
+  end
 
   # GET /clients
   def index
     begin
-      @clients_list = Chef::ApiClient.list().keys.sort
+      @clients_list = client_with_actor.get("clients").keys.sort
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not list clients"
+      log_and_flash_exception(e,
+        "Could not list clients")
       @clients_list = []
     end
     respond_with @clients_list
@@ -37,23 +39,17 @@ class ClientsController < ApplicationController
 
   # GET /clients/:id
   def show
-    @client = begin
-                @client = Chef::ApiClient.load(params[:id])
-              rescue => e
-                Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                flash[:error] = "Could not load client #{params[:id]}"
-                Chef::ApiClient.new
-              end
+    @client = client_with_actor.get("clients/#{params[:id]}")
     respond_with @client
   end
 
   # GET /clients/:id/edit
   def edit
     @client = begin
-                Chef::ApiClient.load(params[:id])
+                client_with_actor.get("clients/#{params[:id]}")
               rescue => e
-                Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                flash[:error] = "Could not load client #{params[:id]}"
+                log_and_flash_exception(e,
+                  "Could not load client #{params[:id]}")
                 Chef::ApiClient.new
               end
     respond_with @client
@@ -61,7 +57,6 @@ class ClientsController < ApplicationController
 
   # GET /clients/new
   def new
-    raise AdminAccessRequired unless params[:user_id] == session[:user] unless session[:level] == :admin
     @client = Chef::ApiClient.new
     respond_with @client
   end
@@ -71,15 +66,14 @@ class ClientsController < ApplicationController
     begin
       @client = Chef::ApiClient.new
       @client.name(params[:name])
-      @client.admin(str_to_bool(params[:admin])) if params[:admin]
-      response = @client.create
+      @client.admin(coerce_boolean(params[:admin])) if params[:admin]
+      response = client_with_actor.post("clients", @client)
       @private_key = OpenSSL::PKey::RSA.new(response["private_key"])
-      flash[:notice] = "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
-      @client = Chef::ApiClient.load(params[:name])
+      flash.now[:notice] = "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
+      @client = client_with_actor.get("clients/#{params[:name]}")
       render :show
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not create client"
+      log_and_flash_exception(e, "Could not create client")
       render :new
     end
   end
@@ -87,18 +81,17 @@ class ClientsController < ApplicationController
   # PUT /clients/:id
   def update
     begin
-      @client = Chef::ApiClient.load(params[:id])
+      @client = client_with_actor.get("clients/#{params[:id]}")
       if params[:regen_private_key]
         @client.create_keys
         @private_key = @client.private_key
       end
       params[:admin] ? @client.admin(true) : @client.admin(false)
-      @client.save
-      flash[:notice] = @private_key.nil? ? "Updated Client" : "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
+      client_with_actor.put("clients/#{params[:id]}", @client)
+      flash.now[:notice] = @private_key.nil? ? "Updated Client" : "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
       render :show
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not update client"
+      log_and_flash_exception(e, "Could not update client")
       render :edit
     end
   end
@@ -106,14 +99,10 @@ class ClientsController < ApplicationController
   # DELETE /clients/:id
   def destroy
     begin
-      @client = Chef::ApiClient.load(params[:id])
-      @client.destroy
+      client_with_actor.delete("clients/#{params[:id]}")
       redirect_to clients_url, :notice => "Client #{params[:id]} deleted successfully"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not delete client #{params[:id]}"
-      @clients_list = Chef::ApiClient.list()
-      render :index
+      log_and_flash_exception(e, "Could not delete client #{params[:id]}")
     end
   end
 

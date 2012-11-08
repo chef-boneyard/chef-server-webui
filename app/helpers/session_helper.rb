@@ -1,20 +1,62 @@
 module SessionHelper
-  def is_admin?
-    user = Chef::WebUIUser.load(session[:user])
-    user.admin?
+
+  # The logged_in? method simply returns true if the user is logged
+  # in and false otherwise. It does this by "booleanizing" the
+  # current_user method we created previously using a double ! operator.
+  # Note that this is not common in Ruby and is discouraged unless you
+  # really mean to convert something into true or false.
+  def logged_in?
+    !!current_user
   end
 
-  #return true if there is only one admin left, false otherwise
-  def is_last_admin?
-    count = 0
-    users = Chef::WebUIUser.list
-    users.each do |u, url|
-      user = Chef::WebUIUser.load(u)
-      if user.admin
-        count = count + 1
-        return false if count == 2
+  # Finds the User with the ID stored in the session with the key
+  # :current_user_id This is a common way to handle user login in
+  # a Rails application; logging in sets the session value and
+  # logging out removes it.
+  def current_user
+    @_current_user ||= session[:current_user_id] &&
+      User.load(session[:current_user_id])
+  end
+
+  def cleanup_session
+    [:current_user_level, :environment].each { |n| session.delete(n) }
+    @_current_user = session[:current_user_id] = nil
+  end
+
+  def logout_and_redirect_to_login
+    cleanup_session
+    @user = User.new
+    redirect_to login_users_url, :alert => $!
+  end
+
+  # Store the URI of the current request in the session.
+  #
+  # We can return to this location by calling #redirect_back_or_default.
+  def store_location
+    session[:return_to] = request.url
+  end
+
+  # Redirect to the URI stored by the most recent store_location call or
+  # to the passed default.
+  def redirect_back_or_default(default)
+    loc = session[:return_to] || default
+    session[:return_to] = nil
+    redirect_to loc
+  end
+
+  #whether or not the user should be able to edit a user's admin status
+  def can_edit_admin?(user)
+    # only admins can edit flag
+    if current_user.admin?
+      # an admin can edit other users flag
+      if user != current_user.name
+        true
+      # an admin can edit their own flag if they are not the last admin
+      elsif current_user.last_admin?
+        false
       end
+    else
+      false
     end
-    true
   end
 end

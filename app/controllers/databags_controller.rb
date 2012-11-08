@@ -21,7 +21,7 @@ require 'chef/data_bag'
 class DatabagsController < ApplicationController
 
   respond_to :html, :json
-  before_filter :login_required
+  before_filter :require_login
   before_filter :require_admin
 
   def new
@@ -31,51 +31,37 @@ class DatabagsController < ApplicationController
   def create
     begin
       @databag = Chef::DataBag.new
+      Chef::DataBag.validate_name!(params[:name])
       @databag.name params[:name]
-      @databag.create
+      client_with_actor.post("data", @databag)
       redirect_to databags_url, :notice => "Created Databag #{@databag.name}"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not create databag"
+      log_and_flash_exception(e, "Could not create databag")
       render :new
     end
   end
 
   def index
     @databags = begin
-                  Chef::REST.new(Chef::Config[:chef_server_url]).get_rest("data")
+                  client_with_actor.get("data")
                 rescue => e
-                  Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                  flash[:error] = "Could not list databags"
+                  log_and_flash_exception(e, "Could not list databags")
                   {}
                 end
   end
 
   def show
-    begin
-      @databag_name = params[:id]
-      r = Chef::REST.new(Chef::Config[:chef_server_url])
-      @databag = r.get_rest("data/#{params[:id]}")
-      raise NotFound unless @databag
-      display @databag
-    rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      @databags = Chef::DataBag.list
-      flash[:error] = "Could not load databag"
-      render :index
-    end
+    @databag = client_with_actor.get("data/#{params[:id]}")
+    @databag_name = params[:id]
   end
 
   def destroy
     begin
-      r = Chef::REST.new(Chef::Config[:chef_server_url])
-      r.delete_rest("data/#{params[:id]}")
+      client_with_actor.delete("data/#{params[:id]}")
       redirect_to databags_url, :notice => "Data bag #{params[:id]} deleted successfully"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      @databags = Chef::DataBag.list
-      flash[:error] = "Could not delete databag"
-      render :index
+      log_and_flash_exception(e, "Could not delete databag")
+      redirect_to :databags
     end
   end
 

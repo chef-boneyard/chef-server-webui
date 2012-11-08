@@ -21,24 +21,22 @@ require 'chef/search/query'
 class SearchController < ApplicationController
 
   respond_to :html
-  before_filter :login_required
+  before_filter :require_login
 
   def index
-    @s = Chef::Search::Query.new
     @search_indexes = begin
-                        @s.list_indexes
+                        client_with_actor.get("search")
                       rescue => e
-                        Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-                        flash[:error] = "Could not list search indexes"
+                        log_and_flash_exception(e, "Could not list search indexes")
                         {}
                       end
   end
 
   def show
     begin
-      @s = Chef::Search::Query.new
       query = (params[:q].nil? || params[:q].empty?) ? "*:*" : URI.escape(params[:q], Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
-      @results = @s.search(params[:id], query)
+      response = client_with_actor.get("search/#{params[:id]}?q=#{query}&sort=&start=0&rows=20")
+      @results = [ response["rows"], response["start"], response["total"] ]
       @type = if params[:id].to_s == "node" || params[:id].to_s == "role" || params[:id].to_s == "client" || params[:id].to_s == "environment"
                 params[:id]
               else
@@ -50,10 +48,8 @@ class SearchController < ApplicationController
       end
       @results
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Unable to find the #{params[:id]}. (#{$!})"
-      @search_indexes = @s.list_indexes
-      render :index
+      log_and_flash_exception(e, "Unable to find the #{params[:id]}")
+      redirect_to :searches
     end
   end
 

@@ -21,15 +21,16 @@ require 'chef/data_bag_item'
 class DatabagItemsController < ApplicationController
 
   respond_to :html, :json
-  before_filter :login_required
+  before_filter :require_login
 
   def edit
     begin
+      @databag_name = params[:databag_id]
+      @databag_item_name = params[:id]
       @databag_item = Chef::DataBagItem.load(params[:databag_id], params[:id])
       @default_data = @databag_item.raw_data
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not load the databag item"
+      log_and_flash_exception(e, "Could not load the databag item")
     end
   end
 
@@ -38,12 +39,11 @@ class DatabagItemsController < ApplicationController
       @databag_item = Chef::DataBagItem.new
       @databag_item.data_bag params[:databag_id]
       @databag_item.raw_data = Chef::JSONCompat.from_json(params[:json_data])
-      raise ArgumentError, "Updating id is not allowed" unless @databag_item.raw_data['id'] == params[:id] #to be consistent with other objects, changing id is not allowed.
-      @databag_item.save
-      redirect_to databag_databag_items_url(params[:databag_id], @databag_item.name), :notice => "Updated Databag Item #{@databag_item.name}"
+      raise HTTPStatus::Forbidden, "Updating id is not allowed" unless @databag_item.raw_data['id'] == params[:id] #to be consistent with other objects, changing id is not allowed.
+      client_with_actor.put("data/#{params[:databag_id]}/#{params[:id]}", @databag_item)
+      redirect_to databag_url(params[:databag_id], @databag_item.name), :notice => "Updated Databag Item #{@databag_item.name}"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not update the databag item"
+      log_and_flash_exception(e, "Could not update the databag item")
       @databag_item = Chef::DataBagItem.load(params[:databag_id], params[:id])
       @default_data = @databag_item
       render :edit
@@ -60,11 +60,13 @@ class DatabagItemsController < ApplicationController
       @databag_item = Chef::DataBagItem.new
       @databag_item.data_bag @databag_name
       @databag_item.raw_data = Chef::JSONCompat.from_json(params[:json_data])
-      @databag_item.create
-      redirect_to(databag_databag_items_url(@databag_name), :notice => "Databag item created successfully" )
+      client_with_actor.post("data/#{params[:databag_id]}", @databag_item)
+      redirect_to(databag_url(@databag_name), :notice => "Databag item created successfully" )
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = "Could not create databag item"
+      log_and_flash_exception(e, "Could not create databag item")
+      if e.kind_of?(Chef::Exceptions::InvalidDataBagItemID)
+        @default_data = {'id'=>''}
+      end
       render :new
     end
   end
@@ -73,26 +75,18 @@ class DatabagItemsController < ApplicationController
   end
 
   def show
-    begin
-      @databag_name = params[:databag_id]
-      @databag_item_name = params[:id]
-      r = Chef::REST.new(Chef::Config[:chef_server_url])
-      @databag_item = r.get_rest("data/#{params[:databag_id]}/#{params[:id]}")
-      display @databag_item
-    rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to databag_databag_items_url(@databag_name), :error => "Could not show the databag item"
-    end
+    @databag_item = client_with_actor.get("data/#{params[:databag_id]}/#{params[:id]}")
+    @databag_name = params[:databag_id]
+    @databag_item_name = params[:id]
   end
 
   def destroy(databag_id=params[:databag_id], item_id=params[:id])
     begin
-      @databag_item = Chef::DataBagItem.new
-      @databag_item.destroy(databag_id, item_id)
-      redirect_to databag_databag_items_url(databag_id), :notice => "Databag item deleted successfully"
+      client_with_actor.delete("data/#{params[:databag_id]}/#{params[:id]}")
+      redirect_to databag_url(databag_id), :notice => "Databag item deleted successfully"
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      redirect_to databag_databag_items_url(databag_id), :error => "Could not delete databag item"
+      log_and_flash_exception(e, "Could not delete databag item")
+      redirect_to databag_databag_items_url(databag_id)
     end
   end
 

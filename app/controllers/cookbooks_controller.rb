@@ -25,7 +25,7 @@ require 'chef/cookbook_version'
 class CookbooksController < ApplicationController
 
   respond_to :html
-  before_filter :login_required
+  before_filter :require_login
   before_filter :params_helper
 
   attr_reader :cookbook_id
@@ -56,14 +56,12 @@ class CookbooksController < ApplicationController
         return
       end
       cookbook_url = "cookbooks/#{cookbook_id}/#{@version}"
-      rest = Chef::REST.new(Chef::Config[:chef_server_url])
-      @cookbook = rest.get_rest(cookbook_url)
-      raise NotFound unless @cookbook
+      @cookbook = client_with_actor.get(cookbook_url)
+      raise HTTPStatus::NotFound, "Cannot find cookbook #{cookbook_id} (@version)" unless @cookbook
       @manifest = @cookbook.manifest
       display @cookbook
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = $!
+      log_and_flash_exception(e)
       @cl = {}
       render :index
     end
@@ -77,7 +75,7 @@ class CookbooksController < ApplicationController
     num_versions = params[:num_versions] || "all"
     all_books = fetch_cookbook_versions(num_versions, :cookbook => cookbook_id,
                                         :use_envs => use_envs)
-    respond_with ({ cookbook_id => all_books[cookbook_id] })
+    respond_with({ cookbook_id => all_books[cookbook_id] })
   end
 
   ## ------
@@ -89,26 +87,22 @@ class CookbooksController < ApplicationController
   def recipe_files
     # node = params.has_key?('node') ? params[:node] : nil
     # @recipe_files = load_all_files(:recipes, node)
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    @recipe_files = r.get_rest("cookbooks/#{params[:id]}/recipes")
+    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/recipes")
     display @recipe_files
   end
 
   def attribute_files
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    @recipe_files = r.get_rest("cookbooks/#{params[:id]}/attributes")
+    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/attributes")
     display @attribute_files
   end
 
   def definition_files
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    @recipe_files = r.get_rest("cookbooks/#{params[:id]}/definitions")
+    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/definitions")
     display @definition_files
   end
 
   def library_files
-    r = Chef::REST.new(Chef::Config[:chef_server_url])
-    @recipe_files = r.get_rest("cookbooks/#{params[:id]}/libraries")
+    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/libraries")
     display @lib_files
   end
 
@@ -151,7 +145,7 @@ class CookbooksController < ApplicationController
       begin
         syntax_highlight(url)
       rescue
-        Chef::Log.error("Error while parsing file #{url}")
+        logger.error("Error while parsing file #{url}")
         show_plain_file(url)
       end
     end
@@ -172,7 +166,7 @@ class CookbooksController < ApplicationController
     url += "/#{opts[:cookbook]}" if opts[:cookbook]
     url += "?num_versions=#{num_versions}"
     begin
-      result = Chef::REST.new(Chef::Config[:chef_server_url]).get_rest(url)
+      result = client_with_actor.get(url)
       result.inject({}) do |ans, (name, cb)|
         cb["versions"].each do |v|
           v["url"] = url(:show_specific_version_cookbook, :cookbook_id => name,
@@ -182,8 +176,7 @@ class CookbooksController < ApplicationController
         ans
       end
     rescue => e
-      Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-      flash[:error] = $!
+      log_and_flash_exception(e, $!)
       {}
     end
   end

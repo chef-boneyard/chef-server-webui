@@ -15,8 +15,4 @@
 # limitations under the License.
 #
 
-require "chef_server_webui/api_client_helper"
-require 'chef_server_webui/config'
-require 'chef_server_webui/version'
-
-CHEF_SERVER_WEBUI_VERSION = ::ChefServerWebui::VERSION
+require "chef_server/rest_client"
