@@ -9,7 +9,7 @@ class ApplicationController < ActionController::Base
   # variable is cleaned up before being used if this thread is recycled.
   around_filter do |controller, action|
     if current_user = controller.current_user
-       Thread.current[:current_user_id] = controller.current_user.name
+       Thread.current[:current_user_id] = current_user.name
     end
     begin
       action.call
