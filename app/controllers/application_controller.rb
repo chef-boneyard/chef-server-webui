@@ -147,31 +147,4 @@ class ApplicationController < ActionController::Base
     end
     files_list
   end
-
-  #############################################################################
-  # Assorted Helpers
-  #############################################################################
-
-  def syntax_highlight(file_url)
-    logger.debug("fetching file from '#{file_url}' for highlighting")
-    highlighted_file = nil
-    client_with_actor.fetch(file_url) do |tempfile|
-      tokens = CodeRay.scan_file(tempfile.path, :ruby)
-      highlighted_file = CodeRay.encode_tokens(tokens, :span)
-    end
-    highlighted_file
-  end
-
-  def show_plain_file(file_url)
-    logger.debug("fetching file from '#{file_url}' for highlighting")
-    client_with_actor.fetch(file_url) do |tempfile|
-      if binary?(tempfile.path)
-        return "Binary file not shown"
-      elsif ((File.size(tempfile.path) / (1048576)) > 5)
-        return "File too large to display"
-      else
-        return IO.read(tempfile.path)
-      end
-    end
-  end
 end

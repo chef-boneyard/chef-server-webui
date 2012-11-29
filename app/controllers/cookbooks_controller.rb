@@ -59,7 +59,7 @@ class CookbooksController < ApplicationController
       @cookbook = client_with_actor.get(cookbook_url)
       raise HTTPStatus::NotFound, "Cannot find cookbook #{cookbook_id} (@version)" unless @cookbook
       @manifest = @cookbook.manifest
-      display @cookbook
+      respond_with @cookbook
     rescue => e
       log_and_flash_exception(e)
       @cl = {}
@@ -78,77 +78,26 @@ class CookbooksController < ApplicationController
     respond_with({ cookbook_id => all_books[cookbook_id] })
   end
 
-  ## ------
-  ## Helpers
-  ##
-  ## TODO: move these to a cookbooks helper module
-  ## ------
-
   def recipe_files
     # node = params.has_key?('node') ? params[:node] : nil
     # @recipe_files = load_all_files(:recipes, node)
     @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/recipes")
-    display @recipe_files
+    respond_with @recipe_files
   end
 
   def attribute_files
-    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/attributes")
-    display @attribute_files
+    @attribute_files = client_with_actor.get("cookbooks/#{params[:id]}/attributes")
+    respond_with @attribute_files
   end
 
   def definition_files
-    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/definitions")
-    display @definition_files
+    @definition_files = client_with_actor.get("cookbooks/#{params[:id]}/definitions")
+    respond_with @definition_files
   end
 
   def library_files
-    @recipe_files = client_with_actor.get("cookbooks/#{params[:id]}/libraries")
-    display @lib_files
-  end
-
-  def more_versions_link(cookbook)
-    link_to("+", "JavaScript:void(0);",
-            :title => "show other versions of #{cookbook}",
-            :data => cookbook,
-            :class => "cookbook_version_toggle")
-  end
-
-  def all_versions_link(cookbook)
-    link_to("show all versions...", "JavaScript:void(0);",
-            :class => "show_all",
-            :id => "#{cookbook}_show_all",
-            :data => cookbook,
-            :title => "show all versions of #{cookbook}")
-  end
-
-  def cookbook_link(version)
-    show_specific_version_cookbook_path(version, @cookbook_id)
-  end
-
-  def cookbook_parts
-    Chef::CookbookVersion::COOKBOOK_SEGMENTS.map do |p|
-      part = p.to_s
-      case part
-      when "files"
-        [part, "plain"]
-      else
-        [part, "ruby"]
-      end
-    end.sort { |a, b| a[0] <=> b[0] }
-  end
-
-  def highlight_content(url, type)
-    case type
-    when "plain"
-      show_plain_file(url)
-    else
-      begin
-        syntax_highlight(url)
-      rescue
-        logger.error("Error while parsing file #{url}")
-        show_plain_file(url)
-      end
-    end
+    @lib_files = client_with_actor.get("cookbooks/#{params[:id]}/libraries")
+    respond_with @lib_files
   end
 
   private
@@ -169,8 +118,8 @@ class CookbooksController < ApplicationController
       result = client_with_actor.get(url)
       result.inject({}) do |ans, (name, cb)|
         cb["versions"].each do |v|
-          v["url"] = url(:show_specific_version_cookbook, :cookbook_id => name,
-                         :cb_version => v["version"])
+          v["url"] = show_specific_version_cookbook_url(:cookbook_id => name,
+                                                        :cb_version => v["version"])
         end
         ans[name] = cb["versions"]
         ans
