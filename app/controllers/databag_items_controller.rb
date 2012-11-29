@@ -27,7 +27,7 @@ class DatabagItemsController < ApplicationController
     begin
       @databag_name = params[:databag_id]
       @databag_item_name = params[:id]
-      @databag_item = Chef::DataBagItem.load(params[:databag_id], params[:id])
+      @databag_item = Chef::DataBagItem.from_hash(client_with_actor.get("data/#{params[:databag_id]}/#{params[:id]}"))
       @default_data = @databag_item.raw_data
     rescue => e
       log_and_flash_exception(e, "Could not load the databag item")
@@ -44,7 +44,7 @@ class DatabagItemsController < ApplicationController
       redirect_to databag_url(params[:databag_id], @databag_item.name), :notice => "Updated Databag Item #{@databag_item.name}"
     rescue => e
       log_and_flash_exception(e, "Could not update the databag item")
-      @databag_item = Chef::DataBagItem.load(params[:databag_id], params[:id])
+      @databag_item = Chef::DataBagItem.from_hash(client_with_actor.get("data/#{params[:databag_id]}/#{params[:id]}"))
       @default_data = @databag_item
       render :edit
     end
