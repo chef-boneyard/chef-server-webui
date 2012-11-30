@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/opscode/chef.git
-  revision: 40bb09b6605852b362875ec99438f22af6c35676
+  revision: a88b70b5586c9bafd81f865cb900bc2cdb6c475d
   branch: master
   specs:
     chef (11.0.0.alpha)
