@@ -80,13 +80,18 @@ class ClientsController < ApplicationController
   def update
     begin
       @client = client_with_actor.get("clients/#{params[:id]}")
+      @private_key = nil
       if params[:regen_private_key]
-        @client.create_keys
-        @private_key = @client.private_key
+        @private_key = OpenSSL::PKey::RSA.generate(2048)
+        @client.public_key(@private_key.public_key.to_s)
       end
       params[:admin] ? @client.admin(true) : @client.admin(false)
-      client_with_actor.put("clients/#{params[:id]}", @client)
-      flash.now[:notice] = @private_key.nil? ? "Updated Client" : "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
+      @client = client_with_actor.put("clients/#{params[:id]}", @client)
+      notice = "Updated Client #{@client.name}."
+      if @private_key
+        notice << " Please copy the following private key as the client's validation key."
+      end
+      flash.now[:notice] = notice
       render :show
     rescue => e
       log_and_flash_exception(e, "Could not update client")
