@@ -115,6 +115,7 @@ class User
     # a PUT with private_key = true tells Erchef to regen the keypair
     # https://github.com/opscode/chef_wm/blob/master/src/chef_wm_named_user.erl#L123-136
     result['private_key'] = true if regenerate_private_key?
+    result['public_key'] = public_key unless public_key.blank?
     result.to_json(*a)
   end
 
