@@ -15,8 +15,9 @@
 # limitations under the License.
 #
 
-require 'chef/config'
 require 'chef/log'
+require 'chef/rest'
+require 'chef/run_list'
 require 'forwardable'
 
 module ChefServer
@@ -25,10 +26,6 @@ module ChefServer
 
     attr_reader :rest_client
 
-    def_delegator :@rest_client, :get_rest
-    def_delegator :@rest_client, :post_rest
-    def_delegator :@rest_client, :put_rest
-    def_delegator :@rest_client, :delete_rest
     def_delegator :@rest_client, :fetch
 
     def initialize(chef_server_url,
@@ -45,17 +42,6 @@ module ChefServer
       define_method method do |*args|
         begin
           @rest_client.send("#{method}_rest".to_sym, *args)
-        rescue => e
-          Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
-          raise e
-        end
-      end
-    end
-
-    [:fetch].each do |method|
-      define_method method do |*args|
-        begin
-          @rest_client.send(method, *args)
         rescue => e
           Chef::Log.error("#{e}\n#{e.backtrace.join("\n")}")
           raise e

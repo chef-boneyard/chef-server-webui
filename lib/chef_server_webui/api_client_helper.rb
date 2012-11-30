@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 
+require 'chef_server/rest_client'
+
 module ChefServerWebui
   module ApiClientHelper
     #
