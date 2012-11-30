@@ -18,11 +18,6 @@
 module ChefServerWebui
   module Helpers
 
-    def binary?(file)
-      s = (File.read(file, File.stat(file).blksize) || "")
-      s.empty? || ( s.count( "^ -~", "^\r\n" ).fdiv(s.size) > 0.3 || s.index( "\x00" ))
-    end
-
     def coerce_boolean(value)
       if value.is_a?(String) && value.blank?
         nil

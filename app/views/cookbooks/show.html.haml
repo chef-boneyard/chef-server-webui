@@ -10,5 +10,11 @@
               = version
     .inner
       .accordion
-        - cookbook_parts.each do |(part, type)|
-          = render('cookbook_content', :cookbook_part => part, :type => type)
+        - @cookbook_files.each do |part, files|
+          - unless files.empty?
+            %h4.head= link_to(part, "JavaScript:void(0);")
+            .files
+              - files.each do |filename, contents|
+                .head= link_to(filename, "JavaScript:void(0);")
+                .code
+                  %pre.ruby= contents
