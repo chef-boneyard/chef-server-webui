@@ -172,8 +172,6 @@ class User
     # return nil if name.blank?
     begin
       result = client.get("users/#{name}")
-      require 'pp'
-      pp result
       # persisted? is used by Rails to determine create vs update
       result.merge!('persisted' => true) if result
       user = User.new(result)
