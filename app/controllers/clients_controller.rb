@@ -64,13 +64,11 @@ class ClientsController < ApplicationController
   # POST /clients
   def create
     begin
-      @client = Chef::ApiClient.new
-      @client.name(params[:name])
-      @client.admin(coerce_boolean(params[:admin])) if params[:admin]
-      response = client_with_actor.post("clients", @client)
+      response = client_with_actor.post("clients", {:name => params[:name],
+                                                    :admin => coerce_boolean(params[:admin]) })
       @private_key = OpenSSL::PKey::RSA.new(response["private_key"])
-      flash.now[:notice] = "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
       @client = client_with_actor.get("clients/#{params[:name]}")
+      flash.now[:notice] = "Created Client #{@client.name}. Please copy the following private key as the client's validation key."
       render :show
     rescue => e
       log_and_flash_exception(e, "Could not create client")
