@@ -57,8 +57,37 @@ class CookbooksController < ApplicationController
       end
       cookbook_url = "cookbooks/#{cookbook_id}/#{@version}"
       @cookbook = client_with_actor.get(cookbook_url)
+
       raise HTTPStatus::NotFound, "Cannot find cookbook #{cookbook_id} (@version)" unless @cookbook
-      @manifest = @cookbook.manifest
+
+      # don't build the manifest in the view please
+      manifest = @cookbook.manifest if @cookbook
+
+      #== cookbook_files
+      # a ::Hash of :cookbook_part => files
+      #
+      # :files: a hash of :filename => hilighted_text
+      #
+      # i.e.
+      # {
+      #   "recipes" => {
+      #     "default.rb" => "THIS IS MY RUBY FILE HIGHLIGHTED",
+      #     "library.rb" => "THIS IS A LIBRARY HIGHLIGHTED"
+      #   },
+      #   "templates" => {}
+      # }
+      #
+      if manifest
+        @cookbook_files = cookbook_parts.inject({}) do |parts, part|
+          part_files = manifest[part].inject({}) do |files, file|
+            files[file["name"]] = syntax_highlight(file["url"], file["name"])
+            files
+          end
+          parts[part] = part_files
+          parts
+        end
+      end
+
       respond_with @cookbook
     rescue => e
       log_and_flash_exception(e)
@@ -130,4 +159,81 @@ class CookbooksController < ApplicationController
     end
   end
 
+  #
+  # the following section is used for rendering cookbook file contents
+  #
+
+  BINARY_EXTENSIONS = ['.gz', '.zip', '.tar', '.bz2', '.so',
+                       '.jpg', '.gif', '.png', '.gd2'].inject({}) do |h, ext|
+    h[ext] = true
+    h
+  end
+
+  MAX_FILE_SIZE_MB = 1
+
+  def cookbook_parts
+    Chef::CookbookVersion::COOKBOOK_SEGMENTS.map do |p|
+      p.to_s
+    end.sort
+  end
+
+  # Return a string suitable for <pre></pre> containing contents of
+  # file_url.
+  #
+  # Known formats (by file extension) are syntax highlighted using
+  # CodeRay.  We attempt to detect and avoid displaying binary
+  # files.
+  #
+  def syntax_highlight(file_url, file_name)
+    highlighted_file = nil
+    lang = CodeRay::FileType[file_name]
+    if lang
+      logger.debug("fetching file from '#{file_url}' for highlighting")
+      client_with_actor.fetch(file_url) do |tempfile|
+        tokens = CodeRay.scan_file(tempfile.path, lang)
+        highlighted_file = CodeRay.encode_tokens(tokens, :span)
+      end
+      highlighted_file.html_safe
+    else
+      if binary_extension?(file_name)
+        "Binary file not shown".html_safe
+      else
+        show_plain_file(file_url)
+      end
+    end
+  rescue Encoding::UndefinedConversionError
+    "Binary file not shown".html_safe
+  end
+
+  def show_plain_file(file_url)
+    client_with_actor.fetch(file_url) do |tempfile|
+      logger.debug("fetching file from '#{file_url}' for plain-lighting")
+      file_size = File.size(tempfile.path)
+      ans = if file_size == 0
+              "Zero length file not shown".html_safe
+            elsif binary_contents?(tempfile.path)
+              "Binary file not shown".html_safe
+            elsif (file_size / (1024*1024) > MAX_FILE_SIZE_MB)
+              "File too large to display".html_safe
+            else
+              IO.read(tempfile.path)
+            end
+      # ChefRest.fetch doesn't return the value returned by the
+      # block, so we need an explicit return here
+      return ans
+    end
+  end
+
+  def binary_extension?(file_name)
+    BINARY_EXTENSIONS.has_key?(::File.extname(file_name))
+  end
+
+  def binary_contents?(file)
+    s = File.read(file, File.stat(file).blksize || 4096)
+    return true if !s || s.empty?   # empty files might as well be binary
+    return true if s.index("\x00")
+    # otherwise, binary if more than 30% non-printable characters
+    non_printable = s.gsub(/[[:print:]]/, '')
+    non_printable.size.fdiv(s.size) > 0.30
+  end
 end

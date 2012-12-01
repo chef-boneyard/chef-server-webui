@@ -1,4 +1,6 @@
 module ApplicationHelper
+  include ChefServerWebui::Helpers
+
   ROLE_STR = "role"
   RECIPE_STR = "recipe"
 
