@@ -50,7 +50,7 @@ ChefServerWebui::Application.routes.draw do
   resources :clients
 
   resources :databags do
-    resources :databag_items, :except => [:index, :show]
+    resources :databag_items, :except => [:index]
   end
 
   resources :users do
