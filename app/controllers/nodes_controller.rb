@@ -83,7 +83,7 @@ class NodesController < ApplicationController
       @node.normal_attrs = Chef::JSONCompat.from_json(params[:attributes])
       @node.run_list.reset!(params[:for_node] ? params[:for_node] : [])
       client_with_actor.post("nodes", @node)
-      redirect_to :nodes, :notice => "Created Node #{@node.name}"
+      redirect_to node_url(@node.name), :notice => "Created Node #{@node.name}"
     rescue => e
       log_and_flash_exception(e,
         "Exception raised creating node, #{e.message.length <= 150 ? e.message : "please check logs for details"}")
@@ -103,8 +103,7 @@ class NodesController < ApplicationController
       @node.run_list.reset!(params[:for_node] ? params[:for_node] : [])
       @node.normal_attrs = Chef::JSONCompat.from_json(params[:attributes])
       @node = client_with_actor.put("nodes/#{params[:id]}", @node)
-      flash.now[:notice] = "Updated Node"
-      render :show
+      redirect_to node_url(@node.name), :notice => "Updated Node #{@node.name}"
     rescue => e
       log_and_flash_exception(e,
         "Exception raised updating node, #{e.message.length <= 150 ? e.message : "please check logs for details"}")
