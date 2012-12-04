@@ -26,6 +26,10 @@ module ChefServer
 
     attr_reader :rest_client
 
+    def_delegator :@rest_client, :get_rest
+    def_delegator :@rest_client, :post_rest
+    def_delegator :@rest_client, :put_rest
+    def_delegator :@rest_client, :delete_rest
     def_delegator :@rest_client, :fetch
 
     def initialize(chef_server_url,
@@ -47,11 +51,6 @@ module ChefServer
           raise e
         end
       end
-    end
-
-    def expand_run_list(environment, run_list_items)
-      run_list_items = run_list_items.to_s if run_list_items.kind_of?(Chef::RunList)
-      Chef::RunList.new(run_list_items).expand(environment, 'server', :rest => @rest_client)
     end
   end
 end
