@@ -99,12 +99,18 @@ class CookbooksController < ApplicationController
   # GET /cookbooks/cookbook_id
   # provides :json, for the javascript on the environments web form.
   def cb_versions
-    respond_to :json
     use_envs = session[:environment] && !params[:ignore_environments]
     num_versions = params[:num_versions] || "all"
     all_books = fetch_cookbook_versions(num_versions, :cookbook => cookbook_id,
                                         :use_envs => use_envs)
-    respond_with({ cookbook_id => all_books[cookbook_id] })
+
+    respond_to do |format|
+      format.html do
+        redirect_to cookbook_version_url(:cookbook_id => cookbook_id,
+                                          :cb_version => '_latest')
+      end
+      format.json { render :json => { cookbook_id => all_books[cookbook_id] } }
+    end
   end
 
   def recipe_files
