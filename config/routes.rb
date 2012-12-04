@@ -44,7 +44,7 @@ ChefServerWebui::Application.routes.draw do
   match "/cookbooks/_environments/:environment_id", :to => "cookbooks#index", :as => :cookbooks_by_environment
 
   match "/cookbooks/:cookbook_id", :cookbook_id => /[\w\.]+/, :only => :get, :to => "cookbooks#cb_versions"
-  match "/cookbooks/:cookbook_id/:cb_version", :cb_version => /[\w\.]+/, :only => :get, :to => "cookbooks#show", :as => :show_specific_version_cookbook
+  match "/cookbooks/:cookbook_id/:cb_version", :cb_version => /[\w\.]+/, :only => :get, :to => "cookbooks#show", :as => :cookbook_version
   resources :cookbooks
 
   resources :clients

@@ -41,7 +41,7 @@ class RolesController < ApplicationController
     @current_env = session[:environment] || "_default"
     @env_run_list_exists = @role.env_run_lists.has_key?(@current_env)
     @run_list = @role.run_list_for(@current_env)
-    @recipes = client_with_actor.expand_run_list(@current_env, @run_list).recipes
+    @recipes = @run_list.expand(@current_env, 'server', {:rest=>client_with_actor}).recipes
   end
 
   # GET /roles/new

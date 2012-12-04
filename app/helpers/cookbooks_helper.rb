@@ -16,6 +16,6 @@ module CookbooksHelper
   end
 
   def cookbook_link(version)
-    show_specific_version_cookbook_path(version, @cookbook_id)
+    cookbook_version_path(version, @cookbook_id)
   end
 end
