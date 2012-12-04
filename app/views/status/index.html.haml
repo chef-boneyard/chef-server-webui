@@ -34,39 +34,17 @@
                               %td= node[1]["uptime"]
 
                 - unless node[1]["ohai_time"].nil?
-                  - current_time = Time.now.to_f
-                  - ohai_time = Time.at(node[1]["ohai_time"])
-                  - hours, minutes, seconds = time_difference_in_hms(ohai_time)
-                  - hours_text   = "#{hours} hour#{hours == 1 ? '' : 's'}"
-                  - minutes_text = "#{minutes} minute#{minutes == 1 ? '' : 's'}"
+                  - date = DateTime.parse(Time.at(node[1]["ohai_time"]).to_s)
                   %td.flash
                     - status_class = ""
-                    - if hours > 24
+                    - if date < 1.day.ago
                       - status_class = "message error"
-                    - elsif hours > 1
+                    - elsif date < 1.hour.ago
                       - status_class = "message warning"
                     %div{ :class => status_class }
                       .accordion
-                        - if hours > 48
-                          - status_msg = "&gt; #{hours/24} days ago"
-                        - elsif hours > 0
-                          - status_msg = "&gt; #{hours_text} ago"
-                        - elsif minutes < 1
-                          - status_msg = "&lt; 1 minute ago"
-                        - else
-                          - status_msg = "#{minutes_text} ago"
-                        = link_to(status_msg, "#", :class=> 'tooltip')
-                        .tooltip
-                          %table.table.tooltip
-                            %tbody
-                              %tr
-                                %td
-                                  = ohai_time
-                                  %br/
-                                  - if hours == 0
-                                    = "#{minutes_text} ago"
-                                  - else
-                                    = "#{hours_text}, #{minutes_text} ago"
+                        = link_to(time_ago_in_words(date), "#", :class=> 'tooltip')
+                        .tooltip #{date.to_formatted_s(:long)} UTC
                 - else
                   %td Not Checked In
                 - unless node[1].run_list.nil?
