@@ -6,7 +6,7 @@
         %select{:name => "choice", :onchange => "jump(this)", :size => "1"}
           - @versions.each do |version|
             - selected = @version == version
-            %option{:value => show_specific_version_cookbook_url(:cookbook_id => @cookbook_id, :cb_version => version), :selected => selected }
+            %option{:value => cookbook_version_path(:cookbook_id => @cookbook_id, :cb_version => version), :selected => selected }
               = version
     .inner
       .accordion

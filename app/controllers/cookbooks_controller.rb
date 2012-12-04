@@ -43,7 +43,7 @@ class CookbooksController < ApplicationController
       all_books = fetch_cookbook_versions("all", :cookbook => cookbook_id)
       @versions = all_books[cookbook_id].map { |v| v["version"] }
       if params[:cb_version] == "_latest"
-        redirect_to show_specific_version_cookbook_url(cookbook_id, @versions.first)
+        redirect_to cookbook_version_url(cookbook_id, @versions.first)
         return
       end
       @version = params[:cb_version]
@@ -147,7 +147,7 @@ class CookbooksController < ApplicationController
       result = client_with_actor.get(url)
       result.inject({}) do |ans, (name, cb)|
         cb["versions"].each do |v|
-          v["url"] = show_specific_version_cookbook_url(:cookbook_id => name,
+          v["url"] = cookbook_version_url(:cookbook_id => name,
                                                         :cb_version => v["version"])
         end
         ans[name] = cb["versions"]
