@@ -20,6 +20,8 @@
 //= require jquery-ui-1.7.1.custom.min
 //= require jquery.treeTable.min
 //= require chef
+//= require cookbook_constraint_ctrl
+//= require cookbook_versions
 //= require drop_down_menu
 //= require jquery.suggest
 
