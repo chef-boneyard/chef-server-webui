@@ -10,7 +10,7 @@
 The `chef-server-webui` is a simple Rails 3.2 application which talks to the Chef Server
 API (aka Erchef) for all back-end data. Installation is easy as the `chef-server-webui`
 already comes preconfigured as part of the default chef-server Omnibus package install. The
-`chef-server-webui` can also be deployed under any [Rack|http://rack.github.com/] compliant
+`chef-server-webui` can also be deployed under any [Rack](http://rack.github.com/) compliant
 server.
 
 The following default configuration values can be overriden in your Rails environment
