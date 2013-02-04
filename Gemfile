@@ -6,8 +6,8 @@ gem "haml-rails"
 gem "coderay"
 gem "http_status_exceptions", "~> 0.3.0"
 
-
-gem "chef", :git => "git://github.com/opscode/chef.git", :branch => "master", :require => false
+# Used as a REST client to access the API
+gem "chef", "~> 11.0.0"
 
 group(:development) do
   gem 'thin'
