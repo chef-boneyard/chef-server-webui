@@ -4,11 +4,6 @@ module ApplicationHelper
   ROLE_STR = "role"
   RECIPE_STR = "recipe"
 
-
-  def chef_version
-    ::ChefServerWebui::VERSION
-  end
-
   def class_for_run_list_item(item)
     case item.type.to_s
     when ROLE_STR
