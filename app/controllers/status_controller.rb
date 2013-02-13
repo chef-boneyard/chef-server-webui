@@ -41,8 +41,19 @@ class StatusController < ApplicationController
 
   def generate_status_hash(query)
     result = Hash.new
-    client_with_actor.get("search/node?q="+query+"&sort=&start=0&rows=20")["rows"].each do |n|
-      result[n.name] = n unless n.nil?
+    args = { 
+			'name' => [ 'name' ], 
+			'platform'   => [ 'platform' ], 
+			'platform_version' => [ 'platform_version' ], 
+			'fqdn' => [ 'fqdn' ], 
+			'ipaddress' => [ 'ipaddress' ], 
+			'uptime' => [ 'uptime' ], 
+			'ohai_time' => [ 'ohai_time' ], 
+			'run_list' => [ 'run_list' ]
+		}
+    client_with_actor.post("search/node?q="+query+"&sort=&start=0",args)["rows"].each do |n|
+puts n.inspect
+      result[n['data']['name']] = n['data'] unless n.nil?
     end
     result
   end

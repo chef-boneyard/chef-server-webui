@@ -19,7 +19,7 @@
           - else
             - @status.sort.each_with_index do |node, index|
               %tr{:class => "#{index % 2 == 1 ? 'odd' : 'even'}"}
-                %td= link_to(node[1].name, node_path(node[1].name))
+                %td= link_to(node[1]['name'], node_path(node[1]['name']))
                 %td= "#{node[1]["platform"]} #{node[1]["platform_version"]}"
                 %td= node[1]["fqdn"]
                 %td= node[1]["ipaddress"]
@@ -47,7 +47,7 @@
                         .tooltip #{date.to_formatted_s(:long)} UTC
                 - else
                   %td Not Checked In
-                - unless node[1].run_list.nil?
+                - unless node[1]['run_list'].nil?
                   %td
                     .accordion
                       = link_to("Run List", "#", :class => 'tooltip')
@@ -56,17 +56,13 @@
                           %thead
                             %tr
                               %th.first Position
-                              %th Name
-                              %th Version
-                              %th.last Type
+                              %th.last Name
                           %tbody
-                            - if node[1].run_list.empty?
+                            - if node[1]['run_list'].empty?
                               %tr
                                 %td{:colspan => 2} This node has no roles or recipes applied.
                             - else
-                              -node[1].run_list.each_with_index do |run_list_item, i|
+                              -node[1]['run_list'].each_with_index do |run_list_item, i|
                                 %tr
                                   %td.position= i
-                                  %td= run_list_item.name
-                                  %td= run_list_item.version
-                                  %td= run_list_item.type
+                                  %td= run_list_item
