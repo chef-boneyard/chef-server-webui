@@ -42,17 +42,16 @@ class StatusController < ApplicationController
   def generate_status_hash(query)
     result = Hash.new
     args = { 
-			'name' => [ 'name' ], 
-			'platform'   => [ 'platform' ], 
-			'platform_version' => [ 'platform_version' ], 
-			'fqdn' => [ 'fqdn' ], 
-			'ipaddress' => [ 'ipaddress' ], 
-			'uptime' => [ 'uptime' ], 
-			'ohai_time' => [ 'ohai_time' ], 
-			'run_list' => [ 'run_list' ]
-		}
+      'name'             => [ 'name' ], 
+      'platform'         => [ 'platform' ], 
+      'platform_version' => [ 'platform_version' ], 
+      'fqdn'             => [ 'fqdn' ], 
+      'ipaddress'        => [ 'ipaddress' ], 
+      'uptime'           => [ 'uptime' ], 
+      'ohai_time'        => [ 'ohai_time' ], 
+      'run_list'         => [ 'run_list' ]
+    }
     client_with_actor.post("search/node?q="+query+"&sort=&start=0",args)["rows"].each do |n|
-puts n.inspect
       result[n['data']['name']] = n['data'] unless n.nil?
     end
     result
