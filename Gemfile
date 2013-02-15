@@ -1,13 +1,13 @@
 source :rubygems
 
-gem "rails", "~> 3.2.11"
+gem "rails", "~> 3.2.12"
 gem "jquery-rails"
 gem "haml-rails"
 gem "coderay"
 gem "http_status_exceptions", "~> 0.3.0"
 
 # Used as a REST client to access the API
-gem "chef", "~> 11.0.0"
+gem "chef", "~> 11.4.0"
 
 group(:development) do
   gem 'thin'
