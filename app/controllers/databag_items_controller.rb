@@ -51,6 +51,7 @@ class DatabagItemsController < ApplicationController
   end
 
   def new
+    @databag_name = params[:databag_id]
     @default_data = {'id'=>''}
   end
 
