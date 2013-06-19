@@ -51,7 +51,8 @@ class StatusController < ApplicationController
       'ohai_time'        => [ 'ohai_time' ], 
       'run_list'         => [ 'run_list' ]
     }
-    client_with_actor.post("search/node?q="+query+"&sort=&start=0",args)["rows"].each do |n|
+    limit = 1000 # Set an arbitrary limit on the number of rows returned
+    client_with_actor.post("search/node?q="+query+"&sort=&start=0&rows=#{limit}", args)["rows"].each do |n|
       result[n['data']['name']] = n['data'] unless n.nil?
     end
     result
