@@ -11,16 +11,16 @@
     %h2.title Login
     .inner
   .content
-  .inner
-    = form_tag login_exec_users_url, :method => :post, :id => 'login', :class => 'form' do
-      %div.group.form
-        %p= label_tag :name, "Username", :class => "label"
-        %p= text_field_tag "name", params.has_key?(:name) ? h(params[:name]) : @user.name
+    .inner
+      = form_tag login_exec_users_url, :method => :post, :id => 'login', :class => 'form' do
+        %div.group.form
+          %p= label_tag :name, "Username", :class => "label"
+          %p= text_field_tag "name", params.has_key?(:name) ? h(params[:name]) : @user.name
 
-      %div.group.form
-        %p= label_tag :password, nil, :class => "label"
-        %p= password_field_tag "password", "", :class => "password_field"
+        %div.group.form
+          %p= label_tag :password, nil, :class => "label"
+          %p= password_field_tag "password", "", :class => "password_field"
 
-      %div.group.form
-        .actions-bar
-          .actions= submit_tag 'login', :id => 'login_button', :class => 'button'
+        %div.group.form
+          .actions-bar
+            .actions= submit_tag 'login', :id => 'login_button', :class => 'button'
