@@ -51,7 +51,13 @@ class StatusController < ApplicationController
       'ohai_time'        => [ 'ohai_time' ], 
       'run_list'         => [ 'run_list' ]
     }
-    limit = 1000 # Set an arbitrary limit on the number of rows returned
+    limit = if params[:limit]
+      # Accept limit of rows returned from query string parameter if specified
+      params[:limit].to_i
+    else
+      # Otherwise arbitrarily set limit
+      1000
+    end
     client_with_actor.post("search/node?q="+query+"&sort=&start=0&rows=#{limit}", args)["rows"].each do |n|
       result[n['data']['name']] = n['data'] unless n.nil?
     end
