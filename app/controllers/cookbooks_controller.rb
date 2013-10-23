@@ -195,10 +195,21 @@ class CookbooksController < ApplicationController
     lang = CodeRay::FileType[file_name]
     if lang
       logger.debug("fetching file from '#{file_url}' for highlighting")
+
+      # Due to a bug in Chef client
+      # (https://tickets.opscode.com/browse/CHEF-3058), we need to manually
+      # override the Accept header here.
+      old_custom_headers = Chef::Config[:custom_http_headers]
+      Chef::Config[:custom_http_headers] = { 'Accept' => 'text/plain' }
+
       client_with_actor.fetch(file_url) do |tempfile|
         tokens = CodeRay.scan_file(tempfile.path, lang)
         highlighted_file = CodeRay.encode_tokens(tokens, :span)
       end
+
+      # Restore original headers
+      Chef::Config[:custom_http_headers] = old_custom_headers
+
       highlighted_file.html_safe
     else
       if binary_extension?(file_name)
