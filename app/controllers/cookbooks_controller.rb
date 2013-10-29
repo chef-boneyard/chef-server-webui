@@ -193,23 +193,19 @@ class CookbooksController < ApplicationController
   def syntax_highlight(file_url, file_name)
     highlighted_file = nil
     lang = CodeRay::FileType[file_name]
+
+    # Due to a bug in Chef client
+    # (https://tickets.opscode.com/browse/CHEF-3058), we need to manually
+    # override the Accept header here.
+    old_custom_headers = Chef::Config[:custom_http_headers]
+    Chef::Config[:custom_http_headers] = { 'Accept' => '*/*' }
+
     if lang
       logger.debug("fetching file from '#{file_url}' for highlighting")
 
-      # Due to a bug in Chef client
-      # (https://tickets.opscode.com/browse/CHEF-3058), we need to manually
-      # override the Accept header here.
-      old_custom_headers = Chef::Config[:custom_http_headers]
-      Chef::Config[:custom_http_headers] = { 'Accept' => 'text/plain' }
-
-      client_with_actor.fetch(file_url) do |tempfile|
-        tokens = CodeRay.scan_file(tempfile.path, lang)
-        highlighted_file = CodeRay.encode_tokens(tokens, :span)
-      end
-
-      # Restore original headers
-      Chef::Config[:custom_http_headers] = old_custom_headers
-
+      file = client_with_actor.get(file_url)
+      tokens = CodeRay.scan(file, lang)
+      highlighted_file = CodeRay.encode_tokens(tokens, :span)
       highlighted_file.html_safe
     else
       if binary_extension?(file_name)
@@ -220,24 +216,22 @@ class CookbooksController < ApplicationController
     end
   rescue Encoding::UndefinedConversionError
     "Binary file not shown".html_safe
+  ensure
+    Chef::Config[:custom_http_headers] = old_custom_headers
   end
 
   def show_plain_file(file_url)
-    client_with_actor.fetch(file_url) do |tempfile|
-      logger.debug("fetching file from '#{file_url}' for plain-lighting")
-      file_size = File.size(tempfile.path)
-      ans = if file_size == 0
-              "Zero length file not shown".html_safe
-            elsif binary_contents?(tempfile.path)
-              "Binary file not shown".html_safe
-            elsif (file_size / (1024*1024) > MAX_FILE_SIZE_MB)
-              "File too large to display".html_safe
-            else
-              IO.read(tempfile.path)
-            end
-      # ChefRest.fetch doesn't return the value returned by the
-      # block, so we need an explicit return here
-      return ans
+    file = client_with_actor.get(file_url)
+    logger.debug("fetching file from '#{file_url}' for plain-lighting")
+    file_size = file.length
+    if file_size == 0
+      "Zero length file not shown".html_safe
+    elsif binary_contents?(file)
+      "Binary file not shown".html_safe
+    elsif (file_size / (1024*1024) > MAX_FILE_SIZE_MB)
+      "File too large to display".html_safe
+    else
+      file
     end
   end
 
@@ -245,8 +239,7 @@ class CookbooksController < ApplicationController
     BINARY_EXTENSIONS.has_key?(::File.extname(file_name))
   end
 
-  def binary_contents?(file)
-    s = File.read(file, File.stat(file).blksize || 4096)
+  def binary_contents?(s)
     return true if !s || s.empty?   # empty files might as well be binary
     return true if s.index("\x00")
     # otherwise, binary if more than 30% non-printable characters
