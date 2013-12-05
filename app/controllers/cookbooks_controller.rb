@@ -209,13 +209,14 @@ class CookbooksController < ApplicationController
       highlighted_file.html_safe
     else
       if binary_extension?(file_name)
-        "Binary file not shown".html_safe
+        "Binary file not shown: binary file extension".html_safe
       else
         show_plain_file(file_url)
       end
     end
-  rescue Encoding::UndefinedConversionError
-    "Binary file not shown".html_safe
+  rescue Encoding::UndefinedConversionError => e
+    "Encoding error converting #{e.error_char.dump} from " \
+    "#{e.source_encoding_name} to #{e.destination_encoding_name}".html_safe
   ensure
     Chef::Config[:custom_http_headers] = old_custom_headers
   end
@@ -227,7 +228,8 @@ class CookbooksController < ApplicationController
     if file_size == 0
       "Zero length file not shown".html_safe
     elsif binary_contents?(file)
-      "Binary file not shown".html_safe
+      "Binary file not shown: found null byte or more than 30% " \
+      "non-printable characters".html_safe
     elsif (file_size / (1024*1024) > MAX_FILE_SIZE_MB)
       "File too large to display".html_safe
     else
