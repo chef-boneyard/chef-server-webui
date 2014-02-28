@@ -85,6 +85,6 @@
 
 <script type='text/javascript'>
   function cookbook_versions() {
-    return <%= cookbook_version_constraints.to_json %>;
+    return <%= cookbook_version_constraints.to_json.html_safe %>;
   }
 </script>
