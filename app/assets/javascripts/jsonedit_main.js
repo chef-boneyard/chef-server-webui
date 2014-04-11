@@ -394,7 +394,7 @@ var BCJTE = function(){
 				parent[nn] = nObj;
 
 				if (t == "object" || t == "array"){
-					if (window.confirm("New value's have been saved.\nDo you want to rebuild the tree?")){
+					if (window.confirm("New values have been saved.\nDo you want to rebuild the tree?")){
 						this.reloadTree();
 						if (this.mktree){
 							var liid = BCJT.mktree.expandCollapseList(document.getElementById("tree"+this.index), this.cli.id);
