@@ -204,7 +204,7 @@ class CookbooksController < ApplicationController
       logger.debug("fetching file from '#{file_url}' for highlighting")
 
       file = client_with_actor.get(file_url)
-      tokens = CodeRay.scan(file, lang)
+      tokens = CodeRay.scan(file.force_encoding('utf-8'), lang)
       highlighted_file = CodeRay.encode_tokens(tokens, :span)
       highlighted_file.html_safe
     else
