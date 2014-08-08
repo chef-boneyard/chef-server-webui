@@ -10,12 +10,18 @@
       = f.hidden_field :name
       %div.group.form
         %p= f.label :password, :class => "label"
-        %p= f.password_field :password, :id => "user_new_password", :class => "password_field"
+        %p= f.password_field :password,
+          :autocomplete => 'off',
+          :class        => 'password_field',
+          :id           => 'user_new_password'
         %span.description New password for the User. Keep blank if you do not want to change password.
 
       %div.group.form
         %p= f.label :password_confirmation, :class => "label"
-        %p= f.password_field :password_confirmation, :id => "user_confirm_new_password", :class =>"password_field"
+        %p= f.password_field :password_confirmation,
+          :autocomplete => 'off',
+          :class        => 'password_field',
+          :id           => 'user_confirm_new_password'
         %span.description Confirm new password for the User. Keep blank if you do not want to change password.
 
       %div.group.form

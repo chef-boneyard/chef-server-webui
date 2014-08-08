@@ -104,13 +104,16 @@ $(document).ready(function(){
     var form = $(this);
     if (form.attr('id') === 'edit_user') {
       form.append('<input type="hidden" name="_method" value="put">');
-      form.append($('input#user_new_password')).css('display', 'none');
+      form.append($('input#user_new_password')).css('display', 'none').
+        attr('autocomplete', 'off');
       form.append($('input#user_admin')).css('display', 'none');
-      form.append($('input#user_confirm_new_password')).css('display', 'none');
+      form.append($('input#user_confirm_new_password')).css('display', 'none').
+        attr('autocomplete', 'off');
     }
     if (form.attr('id') === 'login') {
       form.append($('input#user_name')).css('display', 'none');
-      form.append($('input#password')).css('display', 'none');
+      form.append($('input#password')).css('display', 'none').
+        attr('autocomplete', 'off');
     }
   });
 
