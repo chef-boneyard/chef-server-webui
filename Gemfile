@@ -10,6 +10,7 @@ gem "http_status_exceptions", "~> 0.3.0"
 gem "chef", "~> 11.4.0"
 
 group(:development) do
+  gem 'pry'
   gem 'thin'
 end
 
