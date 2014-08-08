@@ -48,7 +48,7 @@ module ApplicationHelper
               height="14"
               class="clippy" >
       <param name="movie" value="#{asset_path("clippy.swf")}"/>
-      <param name="allowScriptAccess" value="always" />
+      <param name="allowScriptAccess" value="sameDomain" />
       <param name="quality" value="high" />
       <param name="scale" value="noscale" />
       <param NAME="FlashVars" value="text=#{text}">
@@ -58,7 +58,7 @@ module ApplicationHelper
              height="14"
              name="clippy"
              quality="high"
-             allowScriptAccess="always"
+             allowScriptAccess="sameDomain"
              type="application/x-shockwave-flash"
              pluginspage="http://www.macromedia.com/go/getflashplayer"
              FlashVars="text=#{text}"
