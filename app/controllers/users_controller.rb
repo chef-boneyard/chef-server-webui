@@ -16,7 +16,7 @@
 #
 
 class UsersController < ApplicationController
-
+  layout 'login', :only => :login
   respond_to :html
 
   before_filter :require_login, :except => [:login, :login_exec, :complete]
@@ -117,7 +117,6 @@ class UsersController < ApplicationController
       redirect_to :nodes, :flash => { :warning => "You've already logged in with user #{current_user.name}" }
     else
       @user = User.new
-      render :layout => 'login'
     end
   end
 
