@@ -12,11 +12,17 @@
 
         %div.group.form
           %p= f.label :password, :class => "label"
-          %p= f.password_field :password, :id => "user_new_password", :class => "password_field"
+          %p= f.password_field :password,
+            :autocomplete => 'off',
+            :class        => 'password_field',
+            :id           => 'user_new_password'
 
         %div.group.form
           %p= f.label :password_confirmation, :class => "label"
-          %p= f.password_field :password_confirmation, :id => "user_confirm_new_password", :class =>"password_field"
+          %p= f.password_field :password_confirmation,
+            :autocomplete => 'off',
+            :class        => 'password_field',
+            :id           => 'user_confirm_new_password'
 
         %div.group
           %p= f.label :admin, :class => "label"
