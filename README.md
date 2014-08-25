@@ -1,5 +1,8 @@
 # chef-server-webui
 
+*NOTE: This software is deprecated. It will continue to receive critical
+security updates until the future release of Chef Server 13.*
+
 * Documentation: http://docs.opscode.com/
 * Tickets/Issues: http://tickets.opscode.com
 * IRC: [#chef](irc://irc.freenode.net/chef) and [#chef-hacking](irc://irc.freenode.net/chef-hacking) on Freenode
